@@ -65,6 +65,50 @@ or
 
 ---
 
+## Offline Resources / 离线资源
+
+This build includes embedded offline resources for out-of-box use without internet connection:
+
+> 本构建内嵌离线资源，无需网络连接即可开箱即用：
+
+### Embedded Files / 内嵌文件
+
+| Resource / 资源 | Size / 大小 | Description / 说明 |
+|---|---|---|
+| `bootstrap/{abi}.tar` | ~4 MB | Minimal Alpine Linux rootfs with busybox / 最小化 Alpine Linux 根文件系统（含 busybox） |
+| `setup/vectras-vm-arm64-v8a.tar.gz` | 153 MB | QEMU runtime binaries (arm64) / QEMU 运行时二进制文件 (arm64) |
+| `roms/WePE_64_V2.3.iso` | 217 MB | Windows PE system image / Windows PE 系统镜像 |
+| `roms/QEMU_EFI.img` | 64 MB | UEFI firmware variables / UEFI 固件变量 |
+| `roms/QEMU_VARS.img` | 64 MB | UEFI variables store / UEFI 变量存储 |
+| `roms/bios-vectras.bin` | 0.2 MB | BIOS firmware / BIOS 固件 |
+
+### Offline Setup / 离线安装
+
+On first launch, the app **automatically installs QEMU from embedded assets** — no network connection and no manual bootstrap selection required. The default UI language is **Chinese (中文)**.
+
+> 首次启动时，应用会**自动从内嵌资源安装 QEMU**——无需网络连接，也无需手动选择 bootstrap。默认界面语言为**中文**。
+
+### Pre-configured ROM / 预配置 ROM
+
+The WePE ISO is automatically registered as a ROM entry in the VM list. No manual configuration needed.
+
+> WePE ISO 会自动注册为 VM 列表中的 ROM 条目，无需手动配置。
+
+**Note**: The offline QEMU runtime targets **arm64** devices (the vast majority of Android phones). x86_64 devices will need to use Auto Setup or Manual Setup.
+
+> **注意**：离线 QEMU 运行时面向 **arm64** 设备（绝大多数安卓手机）。x86_64 设备需要使用自动安装或手动安装。
+
+### Replicating This Build / 复刻本构建
+
+The large binary resources are **not** stored in the git repository. Download them from the [GitHub Release](https://github.com/qsbye/vectras-vm-zulu/releases) and place them at the following paths before building:
+
+> 大体积二进制资源**不**存储在 git 仓库中。请从 [GitHub Release](https://github.com/qsbye/vectras-vm-zulu/releases) 下载，并在构建前放入以下路径：
+
+- `vectras-vm-arm64-v8a.tar.gz` → `app/src/main/assets/setup/`
+- `WePE_64_V2.3.iso` → `app/src/main/assets/roms/`
+
+---
+
 ### Minimum System Requirements / 最低系统要求
 - Android 5.0 and up. / Android 5.0 及以上
 - 3GB RAM (1GB of free RAM). / 3GB 内存（至少 1GB 可用内存）

@@ -666,43 +666,51 @@ public class SetupQemuActivity extends AppCompatActivity implements View.OnClick
                 " echo \"installation successful! xssFjnj58Id\"");
     }
 
-    private void checkabi() {
-        if (!AppConfig.getSetupFiles().contains("arm64-v8a")) {
-            if (!AppConfig.getSetupFiles().contains("x86_64")) {
-                VectrasApp.oneDialog(getResources().getString(R.string.warning), getResources().getString(R.string.cpu_not_support_64), true, false, activity);
-            }
-        }
+    private void setupVectrasOffline() {
+        inBtn.setVisibility(View.GONE);
+        progressBar.setVisibility(View.VISIBLE);
+        simpleSetupUIControler(1);
+        String filesDir = activity.getFilesDir().getAbsolutePath();
+        String abi = getDeviceAbi();
+        String assetPath = "setup/vectras-vm-" + abi + ".tar.gz";
+        String localTarPath = filesDir + "/vectras-vm-" + abi + ".tar.gz";
 
-        alertDialog = new AlertDialog.Builder(activity, R.style.MainDialogTheme).create();
-        alertDialog.setTitle(getString(R.string.bootstrap_required));
-        alertDialog.setMessage(getString(R.string.you_can_choose_between_auto_download_and_setup_or_manual_setup_by_choosing_bootstrap_file));
-        alertDialog.setCancelable(false);
-        alertDialog.setButton(DialogInterface.BUTTON_POSITIVE, getString(R.string.auto_setup), new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int which) {
-                //startDownload();
-                if (AppConfig.getSetupFiles().contains("arm64-v8a") || AppConfig.getSetupFiles().contains("x86_64")) {
-                    setupVectras64();
+        new AsyncTask<Void, Void, Boolean>() {
+            String errorMessage = null;
+
+            @Override
+            protected Boolean doInBackground(Void... voids) {
+                // Copy QEMU runtime from assets
+                if (!copyAssetToFile(assetPath, localTarPath)) {
+                    errorMessage = "QEMU runtime not found in assets for " + abi;
+                    return false;
+                }
+                return true;
+            }
+
+            @Override
+            protected void onPostExecute(Boolean success) {
+                if (success) {
+                    // Extract QEMU runtime in proot environment
+                    executeShellCommand("set -e;" +
+                            " echo \"Installing QEMU from local package...\";" +
+                            " tar -xzf " + localTarPath + " -C /;" +
+                            " rm " + localTarPath + ";" +
+                            " echo export PULSE_SERVER=127.0.0.1 >> /etc/profile;" +
+                            " mkdir -p ~/.vnc && echo -e \"555555\\n555555\" | vncpasswd -f > ~/.vnc/passwd && chmod 0600 ~/.vnc/passwd;" +
+                            " echo \"installation successful! xssFjnj58Id\"");
                 } else {
-                    setupVectras32();
+                    Toast.makeText(activity, "Offline setup failed: " + errorMessage, Toast.LENGTH_LONG).show();
+                    simpleSetupUIControler(0);
                 }
-                return;
             }
-        });
-        alertDialog.setButton(DialogInterface.BUTTON_NEGATIVE, getString(R.string.manual_setup), new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int which) {
-                Intent intent = new Intent(ACTION_OPEN_DOCUMENT);
-                intent.addCategory(Intent.CATEGORY_OPENABLE);
-                intent.setType("*/*");
+        }.execute();
+    }
 
-                // Optionally, specify a URI for the file that should appear in the
-                // system file picker when it loads.
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, Environment.DIRECTORY_DOWNLOADS);
-                }
-
-                startActivityForResult(intent, 1001);
-            }
-        });
+    private void checkabi() {
+        // This build embeds the QEMU runtime matching the device ABI (arm64).
+        // Skip the manual/auto setup dialog and install from embedded assets directly.
+        setupVectrasOffline();
     }
 
     private void checkpermissions() {
