@@ -10,14 +10,6 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.widget.Toolbar;
 
 import com.bumptech.glide.Glide;
-import com.google.android.gms.ads.AdRequest;
-import com.google.android.gms.ads.AdView;
-import com.google.android.gms.ads.LoadAdError;
-import com.google.android.gms.ads.MobileAds;
-import com.google.android.gms.ads.initialization.InitializationStatus;
-import com.google.android.gms.ads.initialization.OnInitializationCompleteListener;
-import com.google.android.gms.ads.interstitial.InterstitialAd;
-import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback;
 import com.vectras.vm.R;
 import com.vectras.vm.utils.UIUtils;
 
@@ -41,7 +33,6 @@ public class PostActivity extends AppCompatActivity {
     public static ImageView postThumb;
     public static String title, content, contentStr, date, thumb;
 
-    private InterstitialAd mInterstitialAd;
     private String TAG = "PostActivity";
 
     /**
@@ -62,31 +53,6 @@ public class PostActivity extends AppCompatActivity {
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         getSupportActionBar().setDisplayShowHomeEnabled(true);
 
-        //AdView mAdView = findViewById(R.id.adView);
-        //AdRequest adRequest = new AdRequest.Builder().build();
-        //mAdView.loadAd(adRequest);
-        MobileAds.initialize(this, new OnInitializationCompleteListener() {
-            @Override
-            public void onInitializationComplete(InitializationStatus initializationStatus) {
-            }
-        });
-        /*InterstitialAd.load(this, "ca-app-pub-3568137780412047/7745973511", adRequest,
-                new InterstitialAdLoadCallback() {
-                    @Override
-                    public void onAdLoaded(@NonNull InterstitialAd interstitialAd) {
-                        // The mInterstitialAd reference will be null until
-                        // an ad is loaded.
-                        mInterstitialAd = interstitialAd;
-                        Log.i(TAG, "onAdLoaded");
-                    }
-
-                    @Override
-                    public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
-                        // Handle the error
-                        Log.d(TAG, loadAdError.toString());
-                        mInterstitialAd = null;
-                    }
-                });*/
         postContent.setTextIsSelectable(true);
 
         Glide.with(this).load(thumb).into(postThumb);

@@ -10,16 +10,6 @@ import android.os.Bundle;
 
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import com.google.android.gms.ads.AdRequest;
-import com.google.android.gms.ads.AdView;
-import com.google.android.gms.ads.LoadAdError;
-import com.google.android.gms.ads.MobileAds;
-import com.google.android.gms.ads.initialization.InitializationStatus;
-import com.google.android.gms.ads.initialization.OnInitializationCompleteListener;
-import com.google.android.gms.ads.interstitial.InterstitialAd;
-import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback;
 import com.vectras.vm.adapters.GithubUserAdapter;
 import com.vectras.vm.utils.UIUtils;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
@@ -51,7 +41,6 @@ public class AboutActivity extends AppCompatActivity implements View.OnClickList
     String appInfo;
 
     public String TAG = "AboutActivity";
-    private InterstitialAd mInterstitialAd;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -80,9 +69,6 @@ public class AboutActivity extends AppCompatActivity implements View.OnClickList
         btn_osl.setOnClickListener(this);
         btn_clog.setOnClickListener(this);
 
-        //AdView mAdView = findViewById(R.id.adView);
-        //AdRequest adRequest = new AdRequest.Builder().build();
-        //mAdView.loadAd(adRequest);
         VectrasApp.prepareDataForAppConfig(this);
 
         FloatingActionButton fab = findViewById(R.id.fab);
@@ -103,33 +89,6 @@ public class AboutActivity extends AppCompatActivity implements View.OnClickList
 
             }
         });
-
-        MobileAds.initialize(this, new OnInitializationCompleteListener() {
-            @Override
-            public void onInitializationComplete(InitializationStatus initializationStatus) {}
-        });
-        /*InterstitialAd.load(this,"ca-app-pub-3568137780412047/4892595373", adRequest,
-                new InterstitialAdLoadCallback() {
-                    @Override
-                    public void onAdLoaded(@NonNull InterstitialAd interstitialAd) {
-                        // The mInterstitialAd reference will be null until
-                        // an ad is loaded.
-                        mInterstitialAd = interstitialAd;
-                        Log.i(TAG, "onAdLoaded");
-                    }
-
-                    @Override
-                    public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
-                        // Handle the error
-                        Log.d(TAG, loadAdError.toString());
-                        mInterstitialAd = null;
-                    }
-                });*/
-        if (mInterstitialAd != null) {
-            mInterstitialAd.show(AboutActivity.this);
-        } else {
-            Log.d("TAG", "The interstitial ad wasn't ready yet.");
-        }
 
         //TextView textversionname = findViewById(R.id.versionname);
         //PackageInfo pinfo = MainActivity.activity.getAppInfo(getApplicationContext());

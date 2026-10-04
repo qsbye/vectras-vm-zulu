@@ -52,6 +52,11 @@ android {
         aidl true
     }
 
+    aaptOptions {
+        // Keep .tar.gz assets intact (aapt2 otherwise strips the .gz suffix)
+        noCompress 'gz', 'tgz'
+    }
+
     splits {
         abi {
             enable false
@@ -86,7 +91,6 @@ dependencies {
     implementation 'com.google.firebase:firebase-storage'
     implementation("com.google.android.gms:play-services-auth:21.1.1")
     implementation("com.google.firebase:firebase-crashlytics")
-    implementation 'com.google.android.gms:play-services-ads:23.1.0'
     implementation 'com.github.bumptech.glide:glide:4.16.0'
     implementation 'com.google.guava:guava:33.1.0-jre'
     implementation 'com.google.code.gson:gson:2.11.0'

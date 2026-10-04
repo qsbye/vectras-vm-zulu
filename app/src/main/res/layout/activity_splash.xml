@@ -7,6 +7,7 @@
     android:fitsSystemWindows="true">
 
     <ImageView
+        android:id="@+id/logo"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:src="@mipmap/ic_launcher"
@@ -24,5 +25,88 @@
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintBottom_toBottomOf="parent" />
+
+    <!-- Permission gate: shown until all required permissions are granted -->
+    <LinearLayout
+        android:id="@+id/permissionPanel"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="28dp"
+        android:layout_margin="24dp"
+        android:background="@drawable/bg_card_rounded"
+        android:visibility="gone"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="权限申请"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:layout_gravity="center_horizontal" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Permissions required"
+            android:textSize="13sp"
+            android:layout_marginTop="2dp"
+            android:layout_gravity="center_horizontal" />
+
+        <TextView
+            android:id="@+id/permStorageStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="○ 所有文件访问权限\nAllow access to manage all files"
+            android:textSize="15sp"
+            android:lineSpacingExtra="2dp" />
+
+        <TextView
+            android:id="@+id/permNotifStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:text="○ 通知权限\nAllow notifications (Android 13+)"
+            android:textSize="15sp"
+            android:lineSpacingExtra="2dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnGrant"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="26dp"
+            android:text="授予权限 / Grant permissions" />
+    </LinearLayout>
+
+    <!-- Preparation progress: shown while first-run resources are being set up -->
+    <LinearLayout
+        android:id="@+id/preparingPanel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:visibility="gone"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <ProgressBar
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="正在准备运行环境…\nPreparing runtime…"
+            android:gravity="center"
+            android:textSize="14sp" />
+    </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

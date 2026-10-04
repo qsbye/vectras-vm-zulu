@@ -22,14 +22,6 @@ import android.widget.TextView;
 import android.os.PowerManager;
 import androidx.appcompat.app.AlertDialog;
 import com.bumptech.glide.Glide;
-import com.google.android.gms.ads.AdRequest;
-import com.google.android.gms.ads.AdView;
-import com.google.android.gms.ads.LoadAdError;
-import com.google.android.gms.ads.MobileAds;
-import com.google.android.gms.ads.initialization.InitializationStatus;
-import com.google.android.gms.ads.initialization.OnInitializationCompleteListener;
-import com.google.android.gms.ads.interstitial.InterstitialAd;
-import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback;
 import com.vectras.vm.utils.FileUtils;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -62,8 +54,6 @@ public class StoreItemActivity extends AppCompatActivity {
 	public Button dBtn;
 	public ImageView itemIcon, itemPrvMain, itemPrv1, itemPrv2;
 
-	private InterstitialAd mInterstitialAd;
-
 	@Override
 	protected void onCreate(Bundle bundle) {
 		activity = this;
@@ -83,58 +73,10 @@ public class StoreItemActivity extends AppCompatActivity {
 		itemPrv1 = findViewById(R.id.ivPrv1);
 		itemPrv2 = findViewById(R.id.ivPrv2);
 
-		//AdView mAdView = findViewById(R.id.adView);
-		//AdRequest adRequest = new AdRequest.Builder().build();
-		//mAdView.loadAd(adRequest);
-
-		MobileAds.initialize(this, new OnInitializationCompleteListener() {
-			@Override
-			public void onInitializationComplete(InitializationStatus initializationStatus) {}
-		});
-		/*InterstitialAd.load(this,"ca-app-pub-3568137780412047/4892595373", adRequest,
-				new InterstitialAdLoadCallback() {
-					@Override
-					public void onAdLoaded(@NonNull InterstitialAd interstitialAd) {
-						// The mInterstitialAd reference will be null until
-						// an ad is loaded.
-						mInterstitialAd = interstitialAd;
-						Log.i(TAG, "onAdLoaded");
-					}
-
-					@Override
-					public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
-						// Handle the error
-						Log.d(TAG, loadAdError.toString());
-						mInterstitialAd = null;
-					}
-				});*/
-		if (mInterstitialAd != null) {
-			mInterstitialAd.show(StoreItemActivity.this);
-		} else {
-			Log.d("TAG", "The interstitial ad wasn't ready yet.");
-		}
 		dBtn.setOnClickListener(new View.OnClickListener() {
 
 			@Override
 			public void onClick(View view) {
-
-				/*InterstitialAd.load(activity,"ca-app-pub-3568137780412047/7937545204", adRequest,
-						new InterstitialAdLoadCallback() {
-							@Override
-							public void onAdLoaded(@NonNull InterstitialAd interstitialAd) {
-								// The mInterstitialAd reference will be null until
-								// an ad is loaded.
-								mInterstitialAd = interstitialAd;
-								Log.i(TAG, "onAdLoaded");
-							}
-
-							@Override
-							public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
-								// Handle the error
-								Log.d(TAG, loadAdError.toString());
-								mInterstitialAd = null;
-							}
-						});*/
 				startDownload();
 			}
 		});

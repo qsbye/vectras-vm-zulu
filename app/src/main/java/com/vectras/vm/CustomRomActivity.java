@@ -40,11 +40,6 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 
-import com.google.android.gms.ads.AdRequest;
-import com.google.android.gms.ads.AdView;
-import com.google.android.gms.ads.MobileAds;
-import com.google.android.gms.ads.initialization.InitializationStatus;
-import com.google.android.gms.ads.initialization.OnInitializationCompleteListener;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 import com.vectras.qemu.MainSettingsManager;
@@ -165,15 +160,6 @@ public class CustomRomActivity extends AppCompatActivity {
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         getSupportActionBar().setDisplayShowHomeEnabled(true);
         setTitle(getString(R.string.rom_options));
-        //AdView mAdView = findViewById(R.id.adView);
-        //AdRequest adRequest = new AdRequest.Builder().build();
-        //mAdView.loadAd(adRequest);
-        MobileAds.initialize(this, new OnInitializationCompleteListener() {
-            @Override
-            public void onInitializationComplete(InitializationStatus initializationStatus) {
-
-            }
-        });
         title = findViewById(R.id.title);
         icon = findViewById(R.id.icon);
         drive = findViewById(R.id.drive);

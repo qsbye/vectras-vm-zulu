@@ -672,7 +672,7 @@ public class SetupQemuActivity extends AppCompatActivity implements View.OnClick
         simpleSetupUIControler(1);
         String filesDir = activity.getFilesDir().getAbsolutePath();
         String abi = getDeviceAbi();
-        String assetPath = "setup/vectras-vm-" + abi + ".tar.gz";
+        String assetPath = "setup/vectras-vm-" + abi + ".tgz";
         String localTarPath = filesDir + "/vectras-vm-" + abi + ".tar.gz";
 
         new AsyncTask<Void, Void, Boolean>() {
