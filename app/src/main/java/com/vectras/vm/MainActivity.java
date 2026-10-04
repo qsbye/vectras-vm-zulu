@@ -58,14 +58,6 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
-import com.google.android.gms.ads.AdRequest;
-import com.google.android.gms.ads.AdView;
-import com.google.android.gms.ads.LoadAdError;
-import com.google.android.gms.ads.MobileAds;
-import com.google.android.gms.ads.initialization.InitializationStatus;
-import com.google.android.gms.ads.initialization.OnInitializationCompleteListener;
-import com.google.android.gms.ads.interstitial.InterstitialAd;
-import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback;
 import com.google.android.material.appbar.AppBarLayout;
 import com.google.android.material.bottomappbar.BottomAppBar;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
@@ -124,8 +116,6 @@ public class MainActivity extends AppCompatActivity {
     public static List<DataMainRoms> data;
     public AlertDialog ad;
     public static MainActivity activity;
-    private InterstitialAd mInterstitialAd;
-    private AdRequest adRequest;
     public DrawerLayout mainDrawer;
     private String TAG = "MainActivity";
     public static /**/ LinearLayout extVncLayout;
@@ -658,54 +648,10 @@ public class MainActivity extends AppCompatActivity {
 
         getWindow().setNavigationBarColor(SurfaceColors.SURFACE_2.getColor(this));
 
-        adRequest = new AdRequest.Builder().build();
-
-        //AdView mAdView = findViewById(R.id.adView);
-        //adRequest = new AdRequest.Builder().build();
-        //mAdView.loadAd(adRequest);
-
-        MobileAds.initialize(this, new OnInitializationCompleteListener() {
-            @Override
-            public void onInitializationComplete(InitializationStatus initializationStatus) {
-            }
-        });
         if (Config.debug)
             UIAlert(activity, getString(R.string.debug_testing_build_5), getString(R.string.welcome_to_debug_build_of_vectras_vm_br) +
                     getString(R.string.this_version_unstable_and_has_alot_of_bugs_br) +
-                    getString(R.string.don_t_forget_to_tell_us_on_github_issues_or_telegram_bot_br) +
-                    getString(R.string.a_href_https_t_me_vectras_protect_bot_telegram_report_bot_a_br) +
                     getString(R.string.a_href_https_github_com_epicstudios856_vectras_vm_android_issues_github_issues_page_a_br));
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(activity);
-        if (!prefs.getBoolean("tgDialog", false)) {
-            AlertDialog alertDialog;
-            alertDialog = new AlertDialog.Builder(activity, R.style.MainDialogTheme).create();
-            alertDialog.setTitle(getString(R.string.join_us_on_telegram));
-            alertDialog.setMessage(getString(R.string.join_us_on_telegram_where_we_publish_all_the_news_and_updates_and_receive_your_opinions_and_bugs));
-            alertDialog.setButton(DialogInterface.BUTTON_POSITIVE, getString(R.string.join), new DialogInterface.OnClickListener() {
-                public void onClick(DialogInterface dialog, int which) {
-                    String tg = "https://t.me/vectras_os";
-                    Intent f = new Intent(ACTION_VIEW);
-                    f.setData(Uri.parse(tg));
-                    startActivity(f);
-                    return;
-                }
-            });
-            alertDialog.setButton(DialogInterface.BUTTON_NEUTRAL, getString(R.string.cancel), new DialogInterface.OnClickListener() {
-                public void onClick(DialogInterface dialog, int which) {
-                    return;
-                }
-            });
-            alertDialog.setButton(DialogInterface.BUTTON_NEGATIVE, getString(R.string.dont_show_again), new DialogInterface.OnClickListener() {
-                public void onClick(DialogInterface dialog, int which) {
-                    SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(activity);
-                    SharedPreferences.Editor edit = prefs.edit();
-                    edit.putBoolean("tgDialog", true);
-                    edit.apply();
-                    return;
-                }
-            });
-            alertDialog.show();
-        }
 
         totalRam = findViewById(R.id.totalRam);
         usedRam = findViewById(R.id.usedRam);
@@ -1188,28 +1134,6 @@ public class MainActivity extends AppCompatActivity {
         //if (MainSettingsManager.getVmUi(activity).equals("VNC") && MainVNCActivity.started)
             //startActivity(new Intent(activity, MainVNCActivity.class));
 
-        InterstitialAd.load(this, "ca-app-pub-3568137780412047/7745973511", adRequest,
-                new InterstitialAdLoadCallback() {
-                    @Override
-                    public void onAdLoaded(@NonNull InterstitialAd interstitialAd) {
-                        // The mInterstitialAd reference will be null until
-                        // an ad is loaded.
-                        mInterstitialAd = interstitialAd;
-                        Log.i("MainActivity", "onAdLoaded");
-                    }
-
-                    @Override
-                    public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
-                        // Handle the error
-                        Log.d("MainActivity", loadAdError.toString());
-                        mInterstitialAd = null;
-                    }
-                });
-        if (mInterstitialAd != null) {
-            mInterstitialAd.show(this);
-        } else {
-            Log.d("TAG", "The interstitial ad wasn't ready yet.");
-        }
         doneonstart = true;
 
         if (!AppConfig.pendingCommand.isEmpty()) {

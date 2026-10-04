@@ -74,9 +74,14 @@ public class AppConfig {
     public static String vmFolder = maindirpath + "roms/";
     public static String pendingCommand = "";
 
-    public static String neededPkgs = "tar dwm xfce4-terminal libslirp libslirp-dev pulseaudio-dev glib-dev pixman-dev zlib-dev spice-dev" +
-            " libusbredirparser usbredir-dev libiscsi-dev  sdl2 sdl2-dev libepoxy-dev virglrenderer-dev rdma-core" +
-            " libusb ncurses-libs curl libnfs sdl2 gtk+3.0 fuse libpulse libseccomp jack pipewire liburing" +
-            " mesa-dri-gallium mesa-vulkan-swrast vulkan-loader mesa-utils mesa-egl mesa-gbm mesa-vulkan-ati mesa-vulkan-broadcom mesa-vulkan-freedreno mesa-vulkan-panfrost";
+    // Runtime-only packages required by the bundled QEMU binaries (VNC mode).
+    // Bundled as an offline apk repository under assets/apks/<abi>/, installed
+    // automatically by LibraryChecker without network access.
+    public static String neededPkgs = "alsa-lib bzip2 cairo curl libepoxy mesa-gbm gdk-pixbuf" +
+            " gtk+3.0 glib mesa-gl mesa-dri-gallium mesa-egl rdma-core" +
+            " gettext-libs libiscsi jack libjpeg-turbo ncurses-libs libnfs" +
+            " pipewire pixman libpng libpulse pulseaudio cyrus-sasl sdl2 libseccomp" +
+            " spice liburing libusb libusbredirparser virglrenderer" +
+            " libx11 libxxf86vm zlib zstd tar libstdc++";
 
 }

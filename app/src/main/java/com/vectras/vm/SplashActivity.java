@@ -1,21 +1,19 @@
 package com.vectras.vm;
 
+import static android.Manifest.permission.POST_NOTIFICATIONS;
 import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
 import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
-import android.app.ProgressDialog;
 import static android.os.Build.VERSION.SDK_INT;
 
-import android.app.Notification;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
-import android.app.PendingIntent;
+import android.app.ProgressDialog;
+
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
 import android.content.res.Configuration;
+import android.graphics.Color;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
@@ -24,19 +22,20 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
+import android.provider.Settings;
 import android.util.Log;
-import android.widget.Toast;
+import android.view.View;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.app.ActivityCompat;
-import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
 import androidx.preference.PreferenceManager;
 
+import com.google.android.material.button.MaterialButton;
 import com.vectras.qemu.MainSettingsManager;
 import com.vectras.vm.utils.FileUtils;
 
@@ -49,11 +48,23 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.ArrayList;
 import java.util.Locale;
 
 public class SplashActivity extends AppCompatActivity implements Runnable {
     public static SplashActivity activity;
     private final String TAG = "SplashActivity";
+
+    private static final int REQ_RUNTIME_PERMS = 101;
+    private static final int REQ_ALL_FILES = 102;
+
+    private View permissionPanel;
+    private View preparingPanel;
+    private TextView permStorageStatus;
+    private TextView permNotifStatus;
+    private MaterialButton btnGrant;
+
+    private boolean proceeded = false;
 
     @Override
     protected void onCreate(Bundle bundle) {
@@ -61,32 +72,24 @@ public class SplashActivity extends AppCompatActivity implements Runnable {
         activity = this;
         setContentView(R.layout.activity_splash);
 
-        //TextView textversionname;
-        //textversionname = findViewById(R.id.versionname);
-        //PackageInfo pinfo = MainActivity.activity.getAppInfo(getApplicationContext());
-        //textversionname.setText(pinfo.versionName);
+        permissionPanel = findViewById(R.id.permissionPanel);
+        preparingPanel = findViewById(R.id.preparingPanel);
+        permStorageStatus = findViewById(R.id.permStorageStatus);
+        permNotifStatus = findViewById(R.id.permNotifStatus);
+        btnGrant = findViewById(R.id.btnGrant);
+        btnGrant.setOnClickListener(v -> requestMissingPermissions());
+
         VectrasApp.prepareDataForAppConfig(activity);
         setupFolders();
-        SharedPreferences prefs = getSharedPreferences(CREDENTIAL_SHARED_PREF, Context.MODE_PRIVATE);
-
-        try {
-            new Handler().postDelayed(activity, 3000);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }/*
-        boolean isAccessed = prefs.getBoolean("isFirstLaunch", false);
-        if (isAccessed && !checkConnection(activity)) {
-            new Handler().postDelayed(this, 3000);
-        } else {
-        }
-*/
-        //if (!checkPermission())
-            //requestPermission();
         MainSettingsManager.setOrientationSetting(activity, 1);
-
-        setupFiles();
-
         updateLocale();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        refreshPermissionUi();
+        tryProceed();
     }
 
     private void updateLocale() {
@@ -98,6 +101,161 @@ public class SplashActivity extends AppCompatActivity implements Runnable {
         Configuration config = new Configuration();
         config.setLocale(locale);
         getResources().updateConfiguration(config, getResources().getDisplayMetrics());
+    }
+
+    // ------------------------------------------------------------------
+    // Permission gate (single chokepoint: tryProceed)
+    // ------------------------------------------------------------------
+
+    private boolean hasStoragePermission() {
+        if (SDK_INT >= Build.VERSION_CODES.R) {
+            return Environment.isExternalStorageManager();
+        } else {
+            return ContextCompat.checkSelfPermission(this, READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+                    && ContextCompat.checkSelfPermission(this, WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
+        }
+    }
+
+    private boolean hasNotificationPermission() {
+        if (SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            return ContextCompat.checkSelfPermission(this, POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED;
+        }
+        return true;
+    }
+
+    private void refreshPermissionUi() {
+        boolean storage = hasStoragePermission();
+        boolean notif = hasNotificationPermission();
+
+        permStorageStatus.setText(storage
+                ? "● 所有文件访问权限（已授权）\nManage all files: granted"
+                : "○ 所有文件访问权限（未授权）\nManage all files: required");
+        permStorageStatus.setTextColor(storage ? Color.parseColor("#2E7D32") : Color.parseColor("#C62828"));
+
+        if (SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permNotifStatus.setVisibility(View.VISIBLE);
+            permNotifStatus.setText(notif
+                    ? "● 通知权限（已授权）\nNotifications: granted"
+                    : "○ 通知权限（未授权）\nNotifications: required");
+            permNotifStatus.setTextColor(notif ? Color.parseColor("#2E7D32") : Color.parseColor("#C62828"));
+        } else {
+            // Notification permission is implicitly granted before Android 13.
+            permNotifStatus.setText("● 通知权限（系统默认允许）\nNotifications: granted by system");
+            permNotifStatus.setTextColor(Color.parseColor("#2E7D32"));
+        }
+
+        permissionPanel.setVisibility((storage && notif) ? View.GONE : View.VISIBLE);
+    }
+
+    private void requestMissingPermissions() {
+        ArrayList<String> runtimePerms = new ArrayList<>();
+
+        if (SDK_INT < Build.VERSION_CODES.R
+                && ContextCompat.checkSelfPermission(this, READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            runtimePerms.add(READ_EXTERNAL_STORAGE);
+            runtimePerms.add(WRITE_EXTERNAL_STORAGE);
+        }
+
+        if (SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                && ContextCompat.checkSelfPermission(this, POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            runtimePerms.add(POST_NOTIFICATIONS);
+        }
+
+        if (!runtimePerms.isEmpty()) {
+            ActivityCompat.requestPermissions(this,
+                    runtimePerms.toArray(new String[0]), REQ_RUNTIME_PERMS);
+        } else {
+            openAllFilesSettingsIfNeeded();
+        }
+    }
+
+    private void openAllFilesSettingsIfNeeded() {
+        if (SDK_INT >= Build.VERSION_CODES.R && !Environment.isExternalStorageManager()) {
+            try {
+                Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                        Uri.parse("package:" + getPackageName()));
+                startActivityForResult(intent, REQ_ALL_FILES);
+            } catch (Exception e) {
+                try {
+                    Intent intent = new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
+                    startActivityForResult(intent, REQ_ALL_FILES);
+                } catch (Exception ex) {
+                    Toast.makeText(this, "请在系统设置中授予所有文件访问权限", Toast.LENGTH_LONG).show();
+                }
+            }
+        } else {
+            tryProceed();
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        refreshPermissionUi();
+        if (requestCode == REQ_RUNTIME_PERMS) {
+            boolean allGranted = grantResults.length > 0;
+            for (int r : grantResults) {
+                if (r != PackageManager.PERMISSION_GRANTED) {
+                    allGranted = false;
+                    break;
+                }
+            }
+            if (!allGranted) {
+                Toast.makeText(this, "请授予所需权限以继续", Toast.LENGTH_SHORT).show();
+            }
+            openAllFilesSettingsIfNeeded();
+        }
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQ_ALL_FILES) {
+            refreshPermissionUi();
+            tryProceed();
+        }
+    }
+
+    /**
+     * Single chokepoint: both the settings callback path and the synchronous
+     * "already granted" path converge here.
+     */
+    private void tryProceed() {
+        if (proceeded) {
+            return;
+        }
+        if (!hasStoragePermission() || !hasNotificationPermission()) {
+            return;
+        }
+
+        proceeded = true;
+        permissionPanel.setVisibility(View.GONE);
+        preparingPanel.setVisibility(View.VISIBLE);
+
+        // External storage writes (config files, bundled ROM/ISO registration)
+        // happen only after all required permissions have been granted.
+        new Thread(() -> {
+            try {
+                setupFiles();
+            } catch (Exception e) {
+                Log.e(TAG, "setupFiles failed", e);
+            }
+            runOnUiThread(this::routeToNextScreen);
+        }).start();
+    }
+
+    private void routeToNextScreen() {
+        String filesDir = activity.getFilesDir().getAbsolutePath();
+        if ((new File(filesDir, "/distro/usr/local/bin/qemu-system-x86_64").exists())
+                || (new File(filesDir, "/distro/usr/bin/qemu-system-x86_64").exists())) {
+            startActivity(new Intent(this, MainActivity.class));
+        } else {
+            startActivity(new Intent(this, SetupQemuActivity.class));
+            if (Build.VERSION.SDK_INT >= 34) {
+                MainSettingsManager.setVmUi(this, "VNC");
+            }
+        }
+        finish();
     }
 
     public void setupFiles() {
@@ -187,6 +345,9 @@ public class SplashActivity extends AppCompatActivity implements Runnable {
             String destIso = AppConfig.vmFolder + isoName;
             File destFile = new File(destIso);
             if (!destFile.exists()) {
+                if (destFile.getParentFile() != null && !destFile.getParentFile().exists()) {
+                    destFile.getParentFile().mkdirs();
+                }
                 InputStream is = getAssets().open("roms/" + isoName);
                 OutputStream os = new FileOutputStream(destFile);
                 byte[] buf = new byte[8192];
@@ -256,20 +417,6 @@ public class SplashActivity extends AppCompatActivity implements Runnable {
         return com.vectras.vm.utils.FileUtils.getPath(this, uri);
     }
 
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        switch (requestCode) {
-            case 1:
-                if (checkPermission()) {
-                } else {
-                    requestPermission();
-                    Toast.makeText(this, "Permission denied to read your External storage", Toast.LENGTH_SHORT).show();
-                }
-                return;
-        }
-    }
-
     /**
      * CHECK WHETHER INTERNET CONNECTION IS AVAILABLE OR NOT
      */
@@ -281,7 +428,7 @@ public class SplashActivity extends AppCompatActivity implements Runnable {
             NetworkInfo activeNetworkInfo = connMgr.getActiveNetworkInfo();
 
             if (activeNetworkInfo != null) { // connected to the internet
-                // connected to the mobile provider's data plan
+                // connected to wifi
                 if (activeNetworkInfo.getType() == ConnectivityManager.TYPE_WIFI) {
                     // connected to wifi
                     return true;
@@ -339,30 +486,8 @@ public class SplashActivity extends AppCompatActivity implements Runnable {
 
         @Override
         protected void onPostExecute(String unused) {
-            new Handler().postDelayed(activity, 3000);
+            tryProceed();
         }
-    }
-
-    private boolean checkPermission() {
-        if (SDK_INT >= Build.VERSION_CODES.R) {
-            return Environment.isExternalStorageManager();
-        } else {
-            int result = ContextCompat.checkSelfPermission(this, READ_EXTERNAL_STORAGE);
-            int result1 = ContextCompat.checkSelfPermission(this, WRITE_EXTERNAL_STORAGE);
-            return result == PackageManager.PERMISSION_GRANTED && result1 == PackageManager.PERMISSION_GRANTED;
-        }
-    }
-
-    private void requestPermission() {
-        ActivityCompat.requestPermissions(this,
-                permissions(),
-                1);
-    }
-
-    public static String[] permissions() {
-        String[] p;
-        p = storage_permissions;
-        return p;
     }
 
     private void copyAssetFile(String assetFileName, String destinationDirectory) {
@@ -394,12 +519,7 @@ public class SplashActivity extends AppCompatActivity implements Runnable {
                             // NOOP
                         }
                     }
-                    activity.runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            new Handler().postDelayed(this, 3000);
-                        }
-                    });
+                    activity.runOnUiThread(SplashActivity.this::tryProceed);
                 }
             }
         }).start();
@@ -425,17 +545,7 @@ public class SplashActivity extends AppCompatActivity implements Runnable {
 
     @Override
     public void run() {
-        String filesDir = activity.getFilesDir().getAbsolutePath();
-        SharedPreferences prefs = getSharedPreferences(CREDENTIAL_SHARED_PREF, Context.MODE_PRIVATE);
-        if ((new File(filesDir, "/distro/usr/local/bin/qemu-system-x86_64").exists()) || (new File(filesDir, "/distro/usr/bin/qemu-system-x86_64").exists())) {
-            startActivity(new Intent(this, MainActivity.class));
-        } else {
-            startActivity(new Intent(this, SetupQemuActivity.class));
-            //For Android 14+
-            if (Build.VERSION.SDK_INT >= 34) {
-                MainSettingsManager.setVmUi(this, "VNC");
-            }
-        }
-        finish();
+        // Legacy entry point (Handler callbacks): converge on the permission gate.
+        tryProceed();
     }
 }

@@ -23,8 +23,6 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
-import com.google.android.gms.ads.AdRequest;
-import com.google.android.gms.ads.AdView;
 import com.vectras.vm.R;
 import com.vectras.vm.Blog.AdapterBlog;
 import com.vectras.vm.Blog.DataBlog;
@@ -77,9 +75,6 @@ public class StoreActivity extends AppCompatActivity {
 
         activity = this;
         VectrasApp.prepareDataForAppConfig(activity);
-        //AdView mAdView = findViewById(R.id.adView);
-        //AdRequest adRequest = new AdRequest.Builder().build();
-        //mAdView.loadAd(adRequest);
         noConnectionLayout = findViewById(R.id.noConnectionLayout);
         mRVStore = findViewById(R.id.storeRv);
 

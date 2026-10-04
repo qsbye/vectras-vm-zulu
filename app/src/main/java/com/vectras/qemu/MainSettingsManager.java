@@ -626,7 +626,8 @@ public class MainSettingsManager extends AppCompatActivity
 
     public static String getVmUi(Activity activity) {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(activity);
-        return prefs.getString("vmUi", "X11");
+        // Default to VNC: X11 requires GTK libs that are not available offline
+        return prefs.getString("vmUi", "VNC");
     }
 
     public static void setResolution(Activity activity, String RESOLUTION) {
