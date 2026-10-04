@@ -95,6 +95,43 @@ Help support the project by contributing!
 
 ---
 
+## Version Comparison / 版本对比
+
+This project is based on **Vectras VM v2.9.5-3dfx** (`versionCode 21`).
+
+> 本项目基于 **Vectras VM v2.9.5-3dfx**（`versionCode 21`）。
+
+Compared to the newer **v4.4.x** branch (`versionCode 156`), the following differences exist:
+
+> 与较新的 **v4.4.x** 分支（`versionCode 156`）相比，存在以下差异：
+
+| Feature / 特性 | v2.9.5 (This Branch) | v4.4.x |
+|---|---|---|
+| **Minimum Android / 最低 Android 版本** | Android 5.0 | Android 6.0 |
+| **Compile SDK / 编译 SDK** | 34 | 37 |
+| **Java / JDK** | 11 | 21 |
+| **NDK & CMake / 原生构建** | Not included / 不包含 | Included (`cpu-info.cpp`, `gpu_info.cpp`, `termux.c`) / 包含 |
+| **Native CPU/GPU info / 原生 CPU/GPU 信息** | Not available / 不可用 | JNI via Vulkan, detect Adreno / 通过 Vulkan 枚举，识别 Adreno |
+| **X11 Display modes / X11 显示模式** | Basic X11 via Termux-X11 / 基础 X11 | X11 / SDL / OpenGL / Bubble selectable / 多显示模式可选 |
+| **QEMU Params Editor / QEMU 参数编辑器** | Not available / 不可用 | `QemuParamsEditorActivity` / 可编辑保存启动参数 |
+| **VM File Manager / 虚拟机文件管理** | Not available / 不可用 | `VmFileManager` (ROM, snapshot, log, etc.) / 支持 ROM、快照、日志等 |
+| **3DFX Wrappers / 3DFX 包装器** | v2.9.5 ISO only / 仅 v2.9.5 ISO | Added `4.1.1+` ISO / 新增 4.1.1+ ISO |
+| **Dependency management / 依赖管理** | Direct declarations / 直接声明 | Version catalog (`libs.`) / 版本目录 |
+| **Firebase Messaging / 消息推送** | Not included / 不包含 | Included / 包含 |
+| **OSS Licenses / 开源许可页** | Not included / 不包含 | Included / 包含 |
+| **Play Store Native QEMU / Play Store 原生 QEMU** | Proot-based / 基于 Proot | Native QEMU 10, no Proot required / QEMU 10 原生运行 |
+| **Build Tools / 构建工具** | AGP 8.1.2 | AGP with foojay-resolver, NDK 27 / 含工具链解析与 NDK 27 |
+
+**Recommendation / 建议**
+- Use **this branch (v2.9.5)** if you need a lighter build or are targeting older Android devices (Android 5.0+).
+- Use the **v4.4.x** branch if you need X11 multi-display modes, native CPU/GPU detection, QEMU parameter editing, or Play Store native QEMU 10 features.
+
+> **建议**
+> - 如果你需要一个更轻量的构建，或者需要兼容较旧的 Android 设备（Android 5.0+），请使用 **本分支（v2.9.5）**。
+> - 如果你需要 X11 多显示模式、原生 CPU/GPU 检测、QEMU 参数编辑或 Play Store 原生 QEMU 10 功能，请使用 **v4.4.x** 分支。
+
+---
+
 ## Thanks to / 致谢
 - [QEMU](https://github.com/qemu/qemu)
 - [3DFX QEMU PATCH](https://github.com/kjliew/qemu-3dfx)
