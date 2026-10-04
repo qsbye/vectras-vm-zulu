@@ -698,7 +698,7 @@ public class MainSettingsManager extends AppCompatActivity
 
     public static String getLang(Activity activity) {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(activity);
-        return prefs.getString("language", "en");
+        return prefs.getString("language", "zh");
     }
 
     public static boolean isFirstLaunch(Activity activity) {

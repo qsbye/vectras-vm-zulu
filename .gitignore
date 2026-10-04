@@ -86,3 +86,13 @@ README.html
 
 # GitHub token (plaintext credentials)
 .github/token
+
+# Embedded offline resources (published via GitHub Release instead)
+app/src/main/assets/setup/
+app/src/main/assets/roms/WePE_64_V2.3.iso
+
+# Build outputs archived at project root
+VectrasVM-*.apk
+
+# Local machine config
+local.properties

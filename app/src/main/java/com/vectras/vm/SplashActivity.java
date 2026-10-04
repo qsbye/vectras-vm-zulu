@@ -91,7 +91,7 @@ public class SplashActivity extends AppCompatActivity implements Runnable {
 
     private void updateLocale() {
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
-        String languageCode = sharedPreferences.getString("language", "en");
+        String languageCode = sharedPreferences.getString("language", "zh");
 
         Locale locale = new Locale(languageCode);
         Locale.setDefault(locale);
@@ -153,6 +153,86 @@ public class SplashActivity extends AppCompatActivity implements Runnable {
             }
 
         com.vectras.qemu.utils.FileInstaller.installFiles(activity, true);
+
+        // Register embedded WePE ISO as a ROM entry for offline use
+        registerEmbeddedWePERom();
+    }
+
+    /**
+     * Copies WePE ISO from assets to vmFolder and registers it in roms-data.json
+     * so it appears in the ROM list for offline use.
+     */
+    private void registerEmbeddedWePERom() {
+        try {
+            // Check if WePE ISO exists in assets
+            String[] romAssets = getAssets().list("roms");
+            boolean hasWePE = false;
+            if (romAssets != null) {
+                for (String f : romAssets) {
+                    if (f.startsWith("WePE")) {
+                        hasWePE = true;
+                        break;
+                    }
+                }
+            }
+            if (!hasWePE) return;
+
+            // Check if already registered
+            String jsonPath = AppConfig.maindirpath + "roms-data.json";
+            String existing = VectrasApp.readFile(jsonPath);
+            if (existing != null && existing.contains("WePE")) return;
+
+            // Copy ISO from assets to vmFolder
+            String isoName = "WePE_64_V2.3.iso";
+            String destIso = AppConfig.vmFolder + isoName;
+            File destFile = new File(destIso);
+            if (!destFile.exists()) {
+                InputStream is = getAssets().open("roms/" + isoName);
+                OutputStream os = new FileOutputStream(destFile);
+                byte[] buf = new byte[8192];
+                int n;
+                while ((n = is.read(buf)) > 0) {
+                    os.write(buf, 0, n);
+                }
+                os.close();
+                is.close();
+            }
+
+            // Read current roms-data.json and add WePE entry
+            String jsonContent = VectrasApp.readFile(jsonPath);
+            if (jsonContent == null || jsonContent.isEmpty()) jsonContent = "[]";
+
+            // Parse and append new entry
+            String newEntry = String.format(
+                "{\"imgName\":\"WePE 64 V2.3\",\"imgIcon\":\"\",\"imgArch\":\"X86_64\",\"imgPath\":\"\",\"imgCdrom\":\"%s\",\"imgDrv1\":\"\",\"imgExtra\":\"-M pc -accel tcg,thread=multi -cpu qemu64 -smp 4 -m 4096 -vga std -net nic,model=e1000 -net user -usb -device usb-tablet\",\"vmID\":\"wepe_official\"}",
+                destIso.replace("\\", "\\\\")
+            );
+
+            // Insert into JSON array
+            StringBuilder sb = new StringBuilder(jsonContent.trim());
+            if (sb.toString().equals("[]")) {
+                sb = new StringBuilder("[" + newEntry + "]");
+            } else {
+                // Remove trailing ] and append
+                int lastBracket = sb.lastIndexOf("]");
+                if (lastBracket > 0) {
+                    sb.deleteCharAt(lastBracket);
+                    // Add comma if there are existing entries
+                    if (!sb.toString().trim().endsWith("[")) {
+                        sb.append(",");
+                    }
+                    sb.append(newEntry).append("]");
+                }
+            }
+
+            FileWriter writer = new FileWriter(jsonPath);
+            writer.write(sb.toString());
+            writer.flush();
+            writer.close();
+
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to register WePE ROM", e);
+        }
     }
 
 
