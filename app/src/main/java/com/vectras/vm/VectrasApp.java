@@ -439,7 +439,15 @@ public class VectrasApp extends Application {
 	}
 
 	public static boolean checkpermissionsgranted(Activity activity, boolean request) {
-		if (ContextCompat.checkSelfPermission(activity, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
+		boolean granted;
+		if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+			// On Android 11+ WRITE_EXTERNAL_STORAGE is a no-op and may report
+			// denied even while All-files access is granted; check the real gate.
+			granted = android.os.Environment.isExternalStorageManager();
+		} else {
+			granted = ContextCompat.checkSelfPermission(activity, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
+		}
+		if (granted) {
 			return true;
 		} else {
 			if (request) {

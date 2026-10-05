@@ -4,6 +4,10 @@
 *.ap_
 *.aab
 
+# ...but keep the bundled offline Alpine package repository (runtime deps)
+!app/src/main/assets/apks/
+!app/src/main/assets/apks/**/*.apk
+
 # Files for the ART/Dalvik VM
 *.dex
 

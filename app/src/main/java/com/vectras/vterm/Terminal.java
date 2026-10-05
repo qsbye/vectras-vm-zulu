@@ -27,6 +27,8 @@ import java.util.Enumeration;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import com.vectras.qemu.MainSettingsManager;
 import com.vectras.qemu.MainVNCActivity;
@@ -45,8 +47,65 @@ public class Terminal {
     public static Process qemuProcess;
     public static String DISPLAY = ":0";
 
+    // proot instances sharing the same rootfs must NOT run concurrently:
+    // their ptrace/loader state races, causing broken argv ("--login not a
+    // valid option"), hung guests and failed commands. All one-shot commands
+    // are funneled through this single-thread queue.
+    private static final ExecutorService PROOT_EXECUTOR =
+            Executors.newSingleThreadExecutor(r -> {
+                Thread t = new Thread(r, "proot-cmd");
+                t.setDaemon(true);
+                return t;
+            });
+
     public Terminal(Context context) {
         this.context = context;
+    }
+
+    /**
+     * proot keeps per-invocation loader/trace state inside PROOT_TMP_DIR.
+     * Reusing a shared directory makes the first proot call after a crash or
+     * concurrent launch pick up stale loader state, which manifests as guest
+     * argv corruption ("/bin/sh: --login is not a valid option") or hung
+     * processes. Every invocation gets its own fresh directory instead.
+     */
+    private static File newProotTmpDir(File baseTmp) {
+        long now = System.currentTimeMillis();
+        File[] old = baseTmp.listFiles();
+        if (old != null) {
+            for (File f : old) {
+                String n = f.getName();
+                // remove leftovers from previous crashes (older than 1 hour)
+                if (n.startsWith("proot-") && now - f.lastModified() > 3600_000L) {
+                    deleteRecursive(f);
+                }
+            }
+        }
+        File dir = new File(baseTmp, "proot-" + now + "-" + android.os.Process.myPid()
+                + "-" + System.nanoTime());
+        dir.mkdirs();
+        return dir;
+    }
+
+    private static void deleteProotTmp(File dir) {
+        if (dir != null) {
+            deleteRecursive(dir);
+        }
+    }
+
+    private static void deleteRecursive(File f) {
+        if (f == null || !f.exists()) {
+            return;
+        }
+        if (f.isDirectory()) {
+            File[] children = f.listFiles();
+            if (children != null) {
+                for (File c : children) {
+                    deleteRecursive(c);
+                }
+            }
+        }
+        f.delete();
     }
 
 
@@ -100,14 +159,15 @@ public class Terminal {
         progressDialog.setCancelable(false);
         progressDialog.show();
 
-        new Thread(() -> {
+        PROOT_EXECUTOR.execute(() -> {
             try {
                 ProcessBuilder processBuilder = new ProcessBuilder();
 
                 String filesDir = Objects.requireNonNull(context.getFilesDir().getAbsolutePath());
                 File tmpDir = new File(Objects.requireNonNull(context.getFilesDir()), "usr/tmp");
 
-                processBuilder.environment().put("PROOT_TMP_DIR", tmpDir.getAbsolutePath());
+                File prootTmp = newProotTmpDir(tmpDir);
+                processBuilder.environment().put("PROOT_TMP_DIR", prootTmp.getAbsolutePath());
                 processBuilder.environment().put("HOME", "/root");
                 processBuilder.environment().put("USER", user);
                 processBuilder.environment().put("TERM", "xterm-256color");
@@ -132,8 +192,8 @@ public class Terminal {
                         "-b", "/data/data/com.vectras.vm/files/usr/tmp:/tmp",
                         "-w", "/root",
                         "/bin/sh",
-                        "--login"
-                };
+                        "-l"
+};
 
                 processBuilder.command(prootCommand);
                 qemuProcess = processBuilder.start();
@@ -161,6 +221,7 @@ public class Terminal {
                 }
 
                 int exitCode = qemuProcess.waitFor();
+                deleteProotTmp(prootTmp);
                 if (exitCode != 0) {
                     output.append("Execution finished with exit code: ").append(exitCode).append("\n");
                 }
@@ -179,7 +240,7 @@ public class Terminal {
                     }
                 });
             }
-        }).start();
+        });
     }
 
     public void executeShellCommand2(String userCommand, boolean showResultDialog, Activity dialogActivity) {
@@ -187,7 +248,7 @@ public class Terminal {
         StringBuilder errors = new StringBuilder();
         Log.d(TAG, userCommand);
         com.vectras.vm.logger.VectrasStatus.logError("<font color='yellow'>VTERM: >" + userCommand + "</font>");
-        new Thread(() -> {
+        PROOT_EXECUTOR.execute(() -> {
             try {
                 // Setup the qemuProcess builder to start PRoot with environmental variables and commands
                 ProcessBuilder processBuilder = new ProcessBuilder();
@@ -198,7 +259,8 @@ public class Terminal {
                 File tmpDir = new File(Objects.requireNonNull(context.getFilesDir()), "usr/tmp");
 
                 // Setup environment for the PRoot qemuProcess
-                processBuilder.environment().put("PROOT_TMP_DIR", tmpDir.getAbsolutePath());
+                File prootTmp = newProotTmpDir(tmpDir);
+                processBuilder.environment().put("PROOT_TMP_DIR", prootTmp.getAbsolutePath());
 
                 processBuilder.environment().put("HOME", "/root");
                 processBuilder.environment().put("USER", user);
@@ -228,7 +290,7 @@ public class Terminal {
                         "-b", "/data/data/com.vectras.vm/files/usr/tmp:/tmp",
                         "-w", "/root",
                         "/bin/sh",
-                        "--login"// The shell to execute inside PRoot
+                        "-l"// The shell to execute inside PRoot
                 };
 
                 processBuilder.command(prootCommand);
@@ -263,7 +325,8 @@ public class Terminal {
                 reader.close();
                 errorReader.close();
 
-                int exitCode = qemuProcess.waitFor(); // Wait for the process to finish
+                int exitCode = qemuProcess.waitFor();
+                deleteProotTmp(prootTmp); // Wait for the process to finish
                 if (exitCode == 0) {
                     output.append("Execution finished successfully.\n");
                     output.append(reader.readLine()).append("\n");
@@ -290,7 +353,7 @@ public class Terminal {
                     }
                 });
             }
-        }).start();
+        });
     }
 
     public void extractQemuVersion(String userCommand, boolean showResultDialog, Activity dialogActivity, CommandCallback callback) {
@@ -299,7 +362,7 @@ public class Terminal {
         Log.d(TAG, userCommand);
         com.vectras.vm.logger.VectrasStatus.logError("<font color='yellow'>VTERM: >" + userCommand + "</font>");
 
-        new Thread(() -> {
+        PROOT_EXECUTOR.execute(() -> {
             try {
                 // Process setup (same as your original code)
                 ProcessBuilder processBuilder = new ProcessBuilder();
@@ -307,7 +370,8 @@ public class Terminal {
                 String filesDir = Objects.requireNonNull(context.getFilesDir().getAbsolutePath());
                 File tmpDir = new File(Objects.requireNonNull(context.getFilesDir()), "usr/tmp");
 
-                processBuilder.environment().put("PROOT_TMP_DIR", tmpDir.getAbsolutePath());
+                File prootTmp = newProotTmpDir(tmpDir);
+                processBuilder.environment().put("PROOT_TMP_DIR", prootTmp.getAbsolutePath());
                 processBuilder.environment().put("HOME", "/root");
                 processBuilder.environment().put("USER", user);
                 processBuilder.environment().put("TERM", "xterm-256color");
@@ -334,8 +398,8 @@ public class Terminal {
                         "-b", "/data/data/com.vectras.vm/files/usr/tmp:/tmp",
                         "-w", "/root",
                         "/bin/sh",
-                        "--login"
-                };
+                        "-l"
+};
 
                 processBuilder.command(prootCommand);
                 qemuProcess = processBuilder.start();
@@ -362,6 +426,7 @@ public class Terminal {
                 errorReader.close();
 
                 qemuProcess.waitFor();
+                deleteProotTmp(prootTmp);
 
             } catch (IOException | InterruptedException e) {
                 output.append(e.getMessage());
@@ -383,7 +448,7 @@ public class Terminal {
                     }
                 });
             }
-        }).start();
+        });
     }
 
     private String extractVersion(String output) {
@@ -414,14 +479,15 @@ public class Terminal {
         // Make sure to show the dialog on the main thread
         new Handler(Looper.getMainLooper()).post(() -> progressDialog.show());
 
-        new Thread(() -> {
+        PROOT_EXECUTOR.execute(() -> {
             try {
                 ProcessBuilder processBuilder = new ProcessBuilder();
 
                 String filesDir = Objects.requireNonNull(context.getFilesDir().getAbsolutePath());
                 File tmpDir = new File(Objects.requireNonNull(context.getFilesDir()), "usr/tmp");
 
-                processBuilder.environment().put("PROOT_TMP_DIR", tmpDir.getAbsolutePath());
+                File prootTmp = newProotTmpDir(tmpDir);
+                processBuilder.environment().put("PROOT_TMP_DIR", prootTmp.getAbsolutePath());
                 processBuilder.environment().put("HOME", "/root");
                 processBuilder.environment().put("USER", user);
                 processBuilder.environment().put("TERM", "xterm-256color");
@@ -446,8 +512,8 @@ public class Terminal {
                         "-b", "/data/data/com.vectras.vm/files/usr/tmp:/tmp",
                         "-w", "/root",
                         "/bin/sh",
-                        "--login"
-                };
+                        "-l"
+};
 
                 processBuilder.command(prootCommand);
                 qemuProcess = processBuilder.start();
@@ -475,6 +541,7 @@ public class Terminal {
                 }
 
                 int exitCode = qemuProcess.waitFor();
+                deleteProotTmp(prootTmp);
                 if (exitCode != 0) {
                     output.append("Execution finished with exit code: ").append(exitCode).append("\n");
                 }
@@ -493,7 +560,7 @@ public class Terminal {
                 // Use callback to return both output and errors
                 new Handler(Looper.getMainLooper()).post(() -> callback.onCommandCompleted(finalOutput, finalErrors));
             }
-        }).start();
+        });
 
         return "Execution is in progress..."; // Returning a message indicating the command execution is ongoing
     }
