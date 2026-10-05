@@ -81,6 +81,16 @@ This build includes embedded offline resources for out-of-box use without intern
 | `roms/QEMU_EFI.img` | 64 MB | UEFI firmware variables / UEFI 固件变量 |
 | `roms/QEMU_VARS.img` | 64 MB | UEFI variables store / UEFI 变量存储 |
 | `roms/bios-vectras.bin` | 0.2 MB | BIOS firmware / BIOS 固件 |
+| `apks/aarch64/` | ~97 MB (168 packages / 168 个包) | Offline Alpine package repository (v3.19 closure + edge testing libiscsi) for auto-installing QEMU runtime libraries / 离线 Alpine 软件包仓库，用于自动补装 QEMU 运行时依赖库 |
+
+### Behavior Changes in This Fork / 本分支交互调整
+
+- **Permission gate on launch / 启动权限检查页**：the app first enters a permission screen requesting **All-files access (MANAGE_EXTERNAL_STORAGE)** on Android 11+ and **notification permission** on Android 13+; the main screen only opens after both are granted.
+  > 应用启动先进入权限页，依次请求**所有文件访问权限**（Android 11+）与**通知权限**（Android 13+），授权后才进入主界面。
+- **Removed Telegram prompt & ads / 已移除 Telegram 弹窗与广告**：the "JOIN US ON TELEGRAM" dialog and the AdMob banner/interstitial modules are completely removed.
+  > 已彻底移除 "JOIN US ON TELEGRAM" 弹窗以及 AdMob 广告模块。
+- **Silent offline dependency installation / 缺失依赖自动离线安装**：missing Alpine runtime libraries are installed from the bundled repository automatically (`apk add --no-network --allow-untrusted /apks/aarch64/*.apk`), with no extra button to tap.
+  > 检测到缺失的 Alpine 运行库时，直接使用内置仓库静默自动安装，无需用户再次点击。
 
 ### Offline Setup / 离线安装
 
@@ -106,6 +116,29 @@ The large binary resources are **not** stored in the git repository. Download th
 
 - `vectras-vm-arm64-v8a.tar.gz` → `app/src/main/assets/setup/`
 - `WePE_64_V2.3.iso` → `app/src/main/assets/roms/`
+
+The offline Alpine package repository **is tracked in git** at `app/src/main/assets/apks/aarch64/` (168 `.apk` files). A packaged archive (`alpine-apks-aarch64.tar.gz`) is also published on the dedicated [offline-deps release](https://github.com/qsbye/vectras-vm-zulu/releases) in case you prefer downloading a single archive; extract it so that the files land in the path above.
+
+> 离线 Alpine 软件包仓库**已纳入 git**（`app/src/main/assets/apks/aarch64/`，共 168 个 `.apk`）。同时在独立的 [offline-deps Release](https://github.com/qsbye/vectras-vm-zulu/releases) 中提供打包好的单文件归档 `alpine-apks-aarch64.tar.gz`，下载后解压到上述目录即可。
+
+---
+
+## Known Issues / 已知问题
+
+- **Automatic runtime-library installation may fail on some devices / 部分设备自动补装运行库可能失败**：on certain devices/ROMs the proot login shell used to run `apk add` starts with an incomplete `PATH` (errors such as `/bin/sh: no such command 'apk'`, or the login flag being rejected). As a result QEMU libraries (libX11, GLib, pixman, SDL2, GTK, etc.) may remain missing and `qemu-system-x86_64` cannot start. **Workaround / 临时解决办法**：open the in-app terminal and run:
+  > 某些设备/系统上，执行 `apk add` 的 proot 登录 shell 可能以不完整的 `PATH` 启动（报 `/bin/sh: no such command 'apk'` 或登录参数被拒绝），导致 QEMU 依赖库（libX11、GLib、pixman、SDL2、GTK 等）未安装、`qemu-system-x86_64` 无法运行。可在应用内终端手动执行：
+
+  ```sh
+  export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+  apk add --no-network --allow-untrusted /apks/aarch64/*.apk
+  ```
+
+- **Restricted vendors / 厂商限制**：Huawei, Honor, Oppo, Realme and Vivo devices are not supported on Android 14+ (see [Device Compatibility](#device-compatibility--设备兼容性)); proot may also be restricted by vendor kernels on older Android versions.
+  > 华为、荣耀、OPPO、realme、vivo 在 Android 14+ 不受支持；部分旧版本系统上厂商内核也可能限制 proot。
+- **WePE VNC display / WePE VNC 显示**：if the VNC view stays black after boot, first verify that all runtime libraries above are installed — most observed black-screen cases were caused by missing QEMU dependencies.
+  > 若启动 WePE 后 VNC 黑屏，请先确认上述运行库已全部安装；已观测到的黑屏多数由 QEMU 依赖缺失引起。
+- **Offline only / 纯离线环境**：this fork never downloads dependencies at runtime; installing extra Alpine packages beyond the bundled closure requires adding them to `assets/apks/aarch64/` and rebuilding.
+  > 本分支运行期不联网下载依赖；如需安装仓库闭包之外的 Alpine 包，需自行放入 `assets/apks/aarch64/` 后重新构建。
 
 ---
 
