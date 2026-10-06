@@ -1,0 +1,57 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.qsbye.alpinedesktop'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.qsbye.alpinedesktop"
+        minSdk 26
+        // 保持 28：允许执行从 assets 释放到应用目录的二进制（proot/loader），
+        // 与 Termux 同方案。APK 离线直装，不上架 Play。
+        targetSdk 28
+        versionCode 1
+        versionName "1.0"
+        ndk {
+            abiFilters 'arm64-v8a'
+        }
+    }
+
+    // targetSdk 故意保持 28（见上），ExpiredTargetSdkVersion 是有意为之；
+    // 应用离线直装、不上架 Google Play，release 的致命 lint 检查不阻断打包
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+    }
+
+    // rootfs.bin 即 tar.gz（自定义扩展名避开 aapt 对 .gz 的改名/解压特殊处理），
+    // 在 APK 内以存储方式保留，运行时自行 gunzip
+    androidResources {
+        noCompress 'bin'
+    }
+
+    packagingOptions {
+        jniLibs {
+            // libproot.so 需要解压到 nativeLibraryDir 后作为可执行文件直接运行
+            useLegacyPackaging true
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    buildTypes {
+        debug {
+            // debug 构建自带 debug 签名，产出可直接安装
+        }
+        release {
+            // 同样用 debug 签名，保证 assembleRelease 产物可直接安装
+            signingConfig signingConfigs.debug
+            minifyEnabled false
+        }
+    }
+}

@@ -1,0 +1,2 @@
+# rootfs.bin 约 280MB，超过 GitHub 100MB 普通文件上限，走 Git LFS
+app/src/main/assets/rootfs.bin filter=lfs diff=lfs merge=lfs -text
