@@ -132,7 +132,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="6dp"
-                    android:text="显示“Alpine XFCE 运行中”前台服务通知（Android 13+ 需授权）"
+                    android:text="显示“Alpine XFCE 运行中”前台服务通知（部分 Android 12/13+ 机型需授权）"
                     android:textColor="#8FA3B5"
                     android:textSize="12sp" />
 

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- 共享目录位于外部存储 Documents/VectrasVM/home/qsbye/share。
+         根路径故意配置到父目录 qsbye：support-v4 28.0.0 的 FileProvider
+         在目标恰好等于根路径时会 StringIndexOutOfBounds（其
+         substring(root.length()+1) 未处理空相对路径）。 -->
+    <external-path
+        name="home"
+        path="Documents/VectrasVM/home/qsbye" />
+</paths>

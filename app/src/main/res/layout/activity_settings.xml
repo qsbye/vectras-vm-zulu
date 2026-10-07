@@ -121,6 +121,236 @@
             android:textColor="#6E7F8F"
             android:textSize="11sp" />
 
+        <!-- 共享目录 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="共享目录"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/bg_card"
+            android:orientation="vertical"
+            android:padding="14dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="· 手机位置：Documents/VectrasVM/home/qsbye/share"
+                android:textColor="#C7D0D9"
+                android:textSize="13sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="· Alpine 位置：/home/qsbye/share"
+                android:textColor="#C7D0D9"
+                android:textSize="13sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="· 两侧是同一个目录：任一侧放入或删除文件，另一侧立即可见"
+                android:textColor="#C7D0D9"
+                android:textSize="13sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="· 可在 Alpine 桌面文件管理器、终端（cp/mv）或 SSH 会话（端口 8022）中操作"
+                android:textColor="#C7D0D9"
+                android:textSize="13sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="· 其他设备可用 LocalSend 发到本机，再移入共享目录"
+                android:textColor="#C7D0D9"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/btn_open_share"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="使用文件管理器打开共享目录" />
+
+        <!-- 局域网其他设备连接说明 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="局域网连接（其他设备）"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/bg_card"
+            android:orientation="vertical"
+            android:padding="14dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="前提：其他设备与手机连同一个 WiFi。查看手机 IP：系统设置 → WLAN → 当前网络详情（或桌面终端执行 ip addr）"
+                android:textColor="#C7D0D9"
+                android:textSize="13sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="① 浏览器打开桌面（电脑/平板，推荐）："
+                android:textColor="#E4EBF1"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_marginTop="4dp"
+                android:fontFamily="monospace"
+                android:text="http://手机IP:6080/vnc_lite.html?autoconnect=1&amp;resize=remote"
+                android:textColor="#9FD8FF"
+                android:textSize="13sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="② VNC 客户端（RealVNC/TigerVNC 等）："
+                android:textColor="#E4EBF1"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_marginTop="4dp"
+                android:fontFamily="monospace"
+                android:text="地址 手机IP:5900，无密码"
+                android:textColor="#9FD8FF"
+                android:textSize="13sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="③ SSH 终端（Linux/Mac 或 PuTTY）："
+                android:textColor="#E4EBF1"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_marginTop="4dp"
+                android:fontFamily="monospace"
+                android:text="ssh qsbye@手机IP -p 8022"
+                android:textColor="#9FD8FF"
+                android:textSize="13sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_marginTop="2dp"
+                android:text="密码 qsbye，登录后与桌面是同一个系统"
+                android:textColor="#C7D0D9"
+                android:textSize="13sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="④ LocalSend 传文件（与官方 LocalSend App 互通，SSH 里也能用）："
+                android:textColor="#E4EBF1"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_marginTop="4dp"
+                android:text="发给其他设备："
+                android:textColor="#C7D0D9"
+                android:textSize="13sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_marginTop="2dp"
+                android:fontFamily="monospace"
+                android:text="localsend-cli -f 文件1 -f 文件2"
+                android:textColor="#9FD8FF"
+                android:textSize="13sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_marginTop="2dp"
+                android:text="发现设备后按编号 1-9 选择并发送"
+                android:textColor="#C7D0D9"
+                android:textSize="13sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_marginTop="6dp"
+                android:text="接收其他设备发来的文件（直接存进共享目录）："
+                android:textColor="#C7D0D9"
+                android:textSize="13sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_marginTop="2dp"
+                android:fontFamily="monospace"
+                android:text="localsend-cli --destination /home/qsbye/share"
+                android:textColor="#9FD8FF"
+                android:textSize="13sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_marginTop="2dp"
+                android:text="对方在 LocalSend 里选择本机后，按 Y 接受（N 拒绝，P 接受并配对）"
+                android:textColor="#C7D0D9"
+                android:textSize="13sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="注意：5900 端口无密码且对局域网开放，请仅在可信 WiFi 使用；公共 WiFi 建议用系统热点"
+                android:textColor="#E0A07A"
+                android:textSize="13sp" />
+        </LinearLayout>
+
         <Button
             android:id="@+id/btn_save"
             android:layout_width="match_parent"

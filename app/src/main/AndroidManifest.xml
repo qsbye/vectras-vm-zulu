@@ -40,6 +40,17 @@
             android:enabled="true"
             android:exported="false" />
 
+        <!-- 设置页“使用文件管理器打开共享目录”：向文件管理器临时授权共享目录 -->
+        <provider
+            android:name="android.support.v4.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
         <!-- 软件设置：不导出、无启动入口，仅权限检查界面可进入 -->
         <activity
             android:name=".SettingsActivity"

@@ -2,9 +2,12 @@ package com.qsbye.alpinedesktop;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.NotificationManager;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
+import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.content.pm.PermissionInfo;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
@@ -113,20 +116,62 @@ public class MainActivity extends Activity {
     // ==================== 权限检查界面 ====================
 
     private void refreshPermissionStatuses() {
-        boolean storage = checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        // 读、写权限分开判定：部分机型（含 EMUI）只授予 WRITE 不自动授予
+        // READ，会导致能写不能读（设置保存后界面仍显示旧值）
+        boolean storage = checkSelfPermission(android.Manifest.permission.READ_EXTERNAL_STORAGE)
+                == PackageManager.PERMISSION_GRANTED
+                && checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
                 == PackageManager.PERMISSION_GRANTED;
         setRowState(storageStatus, storageButton, storage);
 
-        if (Build.VERSION.SDK_INT < 33) {
-            notificationStatus.setText("当前系统无需授权");
-            notificationStatus.setTextColor(COLOR_NA);
-            notificationButton.setEnabled(false);
-            notificationButton.setText("无需授权");
+        // 不按 SDK 版本一刀切：部分 Android 12 OEM（如 EMUI）回填了
+        // POST_NOTIFICATIONS 运行时权限，默认待审核；一律以系统实测状态为准
+        if (notificationsEnabled()) {
+            setRowState(notificationStatus, notificationButton, true);
         } else {
-            boolean notification = checkSelfPermission(Permission.POST_NOTIFICATIONS)
-                    == PackageManager.PERMISSION_GRANTED;
-            setRowState(notificationStatus, notificationButton, notification);
+            notificationStatus.setText("未授权");
+            notificationStatus.setTextColor(COLOR_DENIED);
+            notificationButton.setEnabled(true);
+            // 运行时权限机型弹授权框；否则只能跳系统通知设置页开启
+            notificationButton.setText(isRuntimePermission(Permission.POST_NOTIFICATIONS)
+                    ? "授予权限" : "前往开启");
         }
+    }
+
+    /** 应用当前是否允许发送通知（API24+；低版本恒为允许） */
+    private boolean notificationsEnabled() {
+        if (Build.VERSION.SDK_INT < 24) {
+            return true;
+        }
+        NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        return nm != null && nm.areNotificationsEnabled();
+    }
+
+    /**
+     * 该权限在当前系统上是否为真正的运行时（危险）权限。
+     * 依据：manifest 已声明该权限，且系统框架将其保护级别定义为 dangerous。
+     * EMUI 回填的 POST_NOTIFICATIONS 在 Android 12 上即满足此条件。
+     */
+    private boolean isRuntimePermission(String permission) {
+        try {
+            PackageInfo pi = getPackageManager().getPackageInfo(
+                    getPackageName(), PackageManager.GET_PERMISSIONS);
+            String[] names = pi.requestedPermissions;
+            if (names == null) {
+                return false;
+            }
+            for (int i = 0; i < names.length; i++) {
+                if (permission.equals(names[i])) {
+                    PermissionInfo info = getPackageManager()
+                            .getPermissionInfo(permission, 0);
+                    return (info.protectionLevel
+                            & PermissionInfo.PROTECTION_MASK_BASE)
+                            == PermissionInfo.PROTECTION_DANGEROUS;
+                }
+            }
+        } catch (Exception ignore) {
+        }
+        return false;
     }
 
     private void setRowState(TextView status, Button button, boolean granted) {
@@ -150,14 +195,59 @@ public class MainActivity extends Activity {
                 .request(new SimplePermissionCallback());
     }
 
-    /** 通知权限：仅 Android 13+ 需要 */
+    private static final int REQ_NOTIFICATION = 100;
+
+    /**
+     * 通知权限：系统框架支持运行时申请时（Android 13+，以及回填该权限的
+     * EMUI 等 ROM）直接弹授权框——在权限界面提前完成，避免启动服务
+     * startForeground 时才被动弹窗；否则跳转系统通知设置页由用户手动开启。
+     */
     private void requestNotification() {
-        if (Build.VERSION.SDK_INT < 33) {
-            return;
+        if (isRuntimePermission(Permission.POST_NOTIFICATIONS)
+                && checkSelfPermission(Permission.POST_NOTIFICATIONS)
+                        != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Permission.POST_NOTIFICATIONS},
+                    REQ_NOTIFICATION);
+        } else {
+            openNotificationSettings();
         }
-        XXPermissions.with(this)
-                .permission(Permission.POST_NOTIFICATIONS)
-                .request(new SimplePermissionCallback());
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                                           int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQ_NOTIFICATION) {
+            refreshPermissionStatuses();
+            // 用户已勾选不再询问仍未授予时，引导到系统设置页
+            if (!notificationsEnabled()
+                    && !shouldShowRequestPermissionRationale(Permission.POST_NOTIFICATIONS)
+                    && isRuntimePermission(Permission.POST_NOTIFICATIONS)) {
+                openNotificationSettings();
+            }
+        }
+    }
+
+    /** 打开本应用的系统通知设置页（各版本写法不同，逐级兜底） */
+    private void openNotificationSettings() {
+        Intent intent = new Intent();
+        if (Build.VERSION.SDK_INT >= 26) {
+            intent.setAction("android.settings.APP_NOTIFICATION_SETTINGS");
+            intent.putExtra("android.provider.extra.APP_PACKAGE", getPackageName());
+        } else {
+            intent.setAction("android.settings.APP_NOTIFICATION_SETTINGS");
+            intent.putExtra("app_package", getPackageName());
+            intent.putExtra("app_uid", getApplicationInfo().uid);
+        }
+        try {
+            startActivity(intent);
+        } catch (Exception e) {
+            Intent fallback = new Intent(
+                    android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+            fallback.setData(android.net.Uri.fromParts("package",
+                    getPackageName(), null));
+            startActivity(fallback);
+        }
     }
 
     private class SimplePermissionCallback implements OnPermissionCallback {
@@ -179,11 +269,11 @@ public class MainActivity extends Activity {
 
     /** 点击“进入 Alpine”：存在未授权项时二次确认（功能降级），全部已授权直接进入 */
     private void enterAlpine() {
-        boolean storageMissing = checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                != PackageManager.PERMISSION_GRANTED;
-        boolean notificationMissing = Build.VERSION.SDK_INT >= 33
-                && checkSelfPermission(Permission.POST_NOTIFICATIONS)
+        boolean storageMissing = checkSelfPermission(android.Manifest.permission.READ_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED
+                || checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
                         != PackageManager.PERMISSION_GRANTED;
+        boolean notificationMissing = !notificationsEnabled();
 
         if (storageMissing || notificationMissing) {
             new AlertDialog.Builder(this)
