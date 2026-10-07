@@ -65,6 +65,32 @@ noVNC / websockify :6080  ──►  Xvnc :5900 (:0)  ──►  XFCE4 桌面
       └──  termux/proot (+外置loader) ─┘   ← 容器根 = assets/rootfs.bin 解出的 rootfs
 ```
 
+## 运行截图 / Screenshots
+
+<p>
+  <img alt="权限检查页" src="screenshots/01-permission-screen.png" height="380">
+  <img alt="Alpine XFCE 桌面" src="screenshots/03-alpine-xfce-desktop.png" width="380">
+</p>
+
+<p>
+  <img alt="软件设置：方向与分辨率" src="screenshots/02-settings-top.png" height="300">
+  <img alt="软件设置：共享目录与局域网连接" src="screenshots/02-settings-lan-bottom.png" height="300">
+</p>
+
+**中文**
+
+1. 启动权限检查页：逐项确认存储（READ+WRITE）与通知权限
+2. Alpine XFCE 桌面：顶部面板、桌面图标、底部居中浮动坞
+3. 软件设置：启动方向、桌面分辨率
+4. 软件设置：共享目录一键打开、局域网连接（noVNC / VNC / SSH / LocalSend）说明
+
+**English**
+
+1. Startup permission screen: storage (READ+WRITE) and notification permissions
+2. Alpine XFCE desktop: top panel, desktop icons, centered floating dock
+3. Settings: launch orientation and desktop resolution
+4. Settings: open shared folder and LAN access (noVNC / VNC / SSH / LocalSend) guide
+
 ## 环境要求 / Requirements
 
 **中文**
