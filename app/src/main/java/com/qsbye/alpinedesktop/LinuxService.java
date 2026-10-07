@@ -8,13 +8,12 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.graphics.Point;
+import android.content.res.Configuration;
 import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Environment;
 import android.os.IBinder;
 import android.os.PowerManager;
-import android.view.WindowManager;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -305,22 +304,27 @@ public class LinuxService extends Service {
     }
 
     /**
-     * 计算 Xvnc 几何尺寸。
-     * 手动分辨率（resolution = "WxH"）原样使用；auto 时取屏幕物理像素的
-     * 长边/短边，再按配置朝向排列：横屏（默认）= 长x短，竖屏 = 短x长。
-     * 不依赖当前旋转状态——旋转动画可能尚未完成，用长边/短边确定性计算。
+     * 计算 Xvnc 几何尺寸（auto = 适合屏幕）。
+     * 手动分辨率（resolution = "WxH"）原样使用；
+     * 否则优先用 MainActivity 旋转后实测的窗口内容区 DIP 尺寸
+     * （已扣除 noVNC 顶部控制栏，且页面 viewport 同为 DIP，1:1 完整显示）；
+     * 未实测到时用 {@link Configuration} 的应用窗口 DP（自动剔除系统状态栏/
+     * 导航栏），长边/短边按配置朝向排列。
      */
     private String screenGeometry(AppConfig cfg) {
         String explicit = cfg.explicitGeometry();
         if (explicit != null) {
             return explicit;
         }
+        if (Status.desiredWidthDip > 0 && Status.desiredHeightDip > 0) {
+            Status.log("geometry from measured window: "
+                    + Status.desiredWidthDip + "x" + Status.desiredHeightDip);
+            return Status.desiredWidthDip + "x" + Status.desiredHeightDip;
+        }
         try {
-            WindowManager wm = (WindowManager) getSystemService(WINDOW_SERVICE);
-            Point p = new Point();
-            wm.getDefaultDisplay().getRealSize(p);
-            int longEdge = Math.max(p.x, p.y);
-            int shortEdge = Math.min(p.x, p.y);
+            Configuration c = getResources().getConfiguration();
+            int longEdge = Math.max(c.screenWidthDp, c.screenHeightDp);
+            int shortEdge = Math.min(c.screenWidthDp, c.screenHeightDp);
             return cfg.isLandscape()
                     ? longEdge + "x" + shortEdge
                     : shortEdge + "x" + longEdge;

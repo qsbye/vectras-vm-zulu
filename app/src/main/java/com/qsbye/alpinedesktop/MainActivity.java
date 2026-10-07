@@ -11,6 +11,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
+import android.view.ViewTreeObserver;
 import android.view.WindowManager;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
@@ -58,6 +59,10 @@ public class MainActivity extends Activity {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private boolean loadedDesktop;
     private long lastBackPress;
+
+    /** 进入 Alpine 前等待旋转布局时使用的配置与单次测量标志 */
+    private AppConfig pendingConfig;
+    private boolean sizeCaptured;
 
     private final Runnable poller = new Runnable() {
         @Override
@@ -202,7 +207,85 @@ public class MainActivity extends Activity {
                 ? "config: " + cfgFile.getAbsolutePath()
                 : "config unavailable, using defaults");
         applyOrientation(cfg);
+        pendingConfig = cfg;
+        sizeCaptured = false;
         permissionScreen.setVisibility(View.GONE);
+        // 先让启动屏占住目标窗口，旋转完成后实测内容区，再启动服务
+        splash.setVisibility(View.VISIBLE);
+        measureWindowThenStart();
+    }
+
+    /**
+     * 旋转动画期间窗口会经过若干瞬态布局（边栏/挖孔内边距分步生效）：
+     * 监听全局布局，只接受“连续两次回调尺寸一致”且朝向正确（横屏 w≥h /
+     * 竖屏 h≥w）的稳定布局；实测像素 ÷ density 得 DIP，写入 Status 供
+     * LinuxService 作为 auto 分辨率。2.5 秒兜底，避免任何机型不回调时
+     * 卡死启动。
+     */
+    private void measureWindowThenStart() {
+        final View content = findViewById(android.R.id.content);
+        final int[] last = {0, 0};
+        final Runnable[] verify = new Runnable[1];
+        final ViewTreeObserver.OnGlobalLayoutListener listener =
+                new ViewTreeObserver.OnGlobalLayoutListener() {
+                    @Override
+                    public void onGlobalLayout() {
+                        final int w = content.getWidth();
+                        final int h = content.getHeight();
+                        boolean oriented = pendingConfig.isLandscape()
+                                ? w >= h : h >= w;
+                        if (sizeCaptured || w <= 0 || h <= 0 || !oriented) {
+                            return;
+                        }
+                        // 延迟 250ms 复核：尺寸不变才算稳定，过滤瞬态布局
+                        handler.removeCallbacks(verify[0]);
+                        verify[0] = () -> {
+                            if (!sizeCaptured
+                                    && content.getWidth() == w
+                                    && content.getHeight() == h) {
+                                content.getViewTreeObserver()
+                                        .removeOnGlobalLayoutListener(this);
+                                captureSize(w, h);
+                            }
+                        };
+                        handler.postDelayed(verify[0], 250);
+                        last[0] = w;
+                        last[1] = h;
+                    }
+                };
+        content.getViewTreeObserver().addOnGlobalLayoutListener(listener);
+        content.requestLayout();
+
+        handler.postDelayed(() -> {
+            if (!sizeCaptured) {
+                int w = content.getWidth();
+                int h = content.getHeight();
+                if (w > 0 && h > 0) {
+                    captureSize(w, h);
+                } else if (last[0] > 0) {
+                    captureSize(last[0], last[1]);
+                } else {
+                    sizeCaptured = true;
+                    Status.log("window measure timeout, service will use config dp");
+                    startDesktop();
+                }
+            }
+        }, 2500);
+    }
+
+    /**
+     * 物理像素 ÷ density = DIP（与 vnc_lite 页面 viewport 的 CSS 像素一致）。
+     * 高度再减去 noVNC 顶部控制栏约 26 DIP：页面 #screen 只占剩余高度，
+     * 这样即使 resize=remote 未被服务器执行，桌面底部也不会被控制栏遮住。
+     */
+    private void captureSize(int widthPx, int heightPx) {
+        sizeCaptured = true;
+        float density = Math.max(getResources().getDisplayMetrics().density, 1f);
+        int w = Math.round(widthPx / density);
+        int h = Math.max(200, Math.round(heightPx / density) - 26);
+        Status.desiredWidthDip = w;
+        Status.desiredHeightDip = h;
+        Status.log("auto resolution: " + w + "x" + h + " dip (density " + density + ")");
         startDesktop();
     }
 

@@ -19,6 +19,14 @@ public final class Status {
     public static volatile int progress = -1;
     public static volatile String message = "";
 
+    /**
+     * MainActivity 在旋转布局完成后实测的应用窗口内容区尺寸（DIP/CSS 像素），
+     * LinuxService 用作 auto 分辨率；0 表示未提供（服务走 Configuration DP 兜底）。
+     * 注意：reset() 不清这两个字段——它们在服务启动前由 UI 写入。
+     */
+    public static volatile int desiredWidthDip;
+    public static volatile int desiredHeightDip;
+
     private static final ArrayDeque<String> LOG = new ArrayDeque<>();
 
     public static void log(String line) {

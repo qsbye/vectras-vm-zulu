@@ -261,8 +261,9 @@ about 1–3 minutes depending on flash storage speed.
      （目录不存在先自动创建；proot bind 是路径翻译不是真 mount，
      `mount`/`df` 里看不到，属预期）
    - guest 入口经 `/usr/bin/env -i` 以干净环境启动（`HOME=/home/qsbye`、
-     固定 guest `PATH`、`GEOMETRY` 按配置计算：`auto` 时取屏幕物理像素
-     长边/短边并按横/竖屏朝向排列，手动分辨率则原样使用），执行
+     固定 guest `PATH`、`GEOMETRY` 按配置计算：`auto` 时取 MainActivity
+     旋转后实测的应用窗口内容区 **DIP（CSS 像素）** 尺寸（高度扣除
+     noVNC 顶部控制栏），手动分辨率则原样使用），执行
      `/usr/local/bin/desktop-start.sh`
    - 宿主侧环境仅设：`PATH=<files>/bin:/system/bin`、
      **`PROOT_LOADER=<files>/bin/loader`**、`LD_LIBRARY_PATH=<files>/bin`、
@@ -324,8 +325,9 @@ about 1–3 minutes depending on flash storage speed.
      real mount — it does not appear in `mount`/`df`, which is expected)
    - The guest entry starts through `/usr/bin/env -i` with a clean environment
      (`HOME=/home/qsbye`, fixed guest `PATH`, `GEOMETRY` computed from config:
-     for `auto` the screen's physical long/short edges are arranged per the
-     configured orientation; a custom resolution is used as-is), running
+     for `auto` the activity measures the actual window content size in
+     **DIP (CSS pixels)** after rotation (height reduced by the noVNC top
+     control bar); a custom resolution is used as-is), running
      `/usr/local/bin/desktop-start.sh`
    - Host-side environment only sets: `PATH=<files>/bin:/system/bin`,
      **`PROOT_LOADER=<files>/bin/loader`**, `LD_LIBRARY_PATH=<files>/bin`,
@@ -447,8 +449,12 @@ about 1–3 minutes depending on flash storage speed.
 
   推荐在启动权限检查界面点“软件设置”图形化修改；手动改文件后完全退出应用
   再进入即生效
-- **分辨率**：`GEOMETRY` 由 App 按 `Display.getRealSize` 与配置朝向
-  计算传入，noVNC `resize=remote` 跟随窗口
+- **分辨率（auto 适合屏幕）**：MainActivity 在旋转布局稳定后实测应用窗口
+  内容区（物理像素 ÷ density = DIP，高度扣除 noVNC 顶部控制栏），
+  经 `Status` 传给 LinuxService 作为 Xvnc `GEOMETRY`；未实测到时服务用
+  `Configuration.screenWidthDp/HeightDp` 兜底。页面 viewport 同为 DIP，
+  画布 1:1 完整显示；noVNC `resize=remote` 连上后还会按页面容器微调
+  （rootfs 内 vnc_lite.html 已打补丁支持该参数，官方精简版默认不识别）
 - **Guest 内置工具**：`localsend-cli`（局域网传文件）、`opencode`
   （AI 终端编程助手），桌面终端或 ssh 会话中直接运行
 - **退出/重置**：清除应用数据即重新走首次释放；`onDestroy` 会终止 proot
@@ -475,9 +481,14 @@ about 1–3 minutes depending on flash storage speed.
   Prefer the "Settings" button on the launch permission screen for a graphical
   editor; after editing the file manually, fully quit and reopen the app for it
   to take effect.
-- **Resolution**: `GEOMETRY` is passed in by the app, computed from
-  `Display.getRealSize` and the configured orientation; noVNC
-  `resize=remote` follows the window.
+- **Resolution (auto fits screen)**: after the rotated layout settles, the
+  activity measures the actual window content size (physical pixels ÷ density
+  = DIP; height reduced by the noVNC top control bar) and passes it through
+  `Status` to LinuxService as the Xvnc `GEOMETRY`; if unavailable, the
+  service falls back to `Configuration.screenWidthDp/HeightDp`. The page
+  viewport is also DIP, so the canvas shows the full desktop 1:1; noVNC
+  `resize=remote` fine-tunes to the page container on connect (the in-rootfs
+  vnc_lite.html is patched to support this — the stock lite page ignores it).
 - **Bundled guest tools**: `localsend-cli` (LAN file transfer) and `opencode`
   (AI terminal coding assistant), runnable directly in a desktop terminal or
   ssh session.

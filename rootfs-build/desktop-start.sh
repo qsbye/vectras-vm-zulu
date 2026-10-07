@@ -2,7 +2,8 @@
 # proot 入口：由 Android 端调用
 # Android 的 proot 无真实多用户，会话统一以"root"身份运行（fake_id0），
 # 但 HOME 指向 qsbye 的家目录；qsbye 账户仍可在终端内登录（密码 qsbye）。
-# 环境变量 GEOMETRY=WxH 由 App 按屏幕物理尺寸与配置朝向（横/竖屏）计算传入
+# 环境变量 GEOMETRY=WxH 由 App 按应用窗口 DIP（CSS 像素）尺寸与配置朝向
+# （横/竖屏）计算传入；连接后 noVNC resize=remote 还会按页面容器微调
 GEOMETRY="${GEOMETRY:-1280x800}"
 # 固定客户机 PATH，避免 Android 宿主机 PATH 经 proot 泄漏导致找不到命令
 # 末尾追加 /home/qsbye，方便直接运行 localsend-cli 等放在家目录的程序

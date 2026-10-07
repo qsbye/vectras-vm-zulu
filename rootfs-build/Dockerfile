@@ -23,6 +23,10 @@ RUN adduser -D -s /bin/sh qsbye \
 COPY desktop-start.sh /usr/local/bin/desktop-start.sh
 RUN chmod 755 /usr/local/bin/desktop-start.sh
 
+# 覆盖官方 vnc_lite.html：补 viewport meta（WebView 以 DIP/CSS 像素布局）
+# 并支持 resize=remote（帧缓冲跟随页面容器实际大小），修复桌面只显示上半部分
+COPY vnc_lite.html /usr/share/novnc/vnc_lite.html
+
 # LocalSend CLI（glibc 动态链接，依赖上面的 gcompat）
 COPY localsend-cli /home/qsbye/localsend-cli
 RUN chmod 755 /home/qsbye/localsend-cli \
