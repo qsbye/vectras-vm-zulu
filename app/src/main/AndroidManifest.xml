@@ -10,6 +10,8 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <!-- LocalSend 等 guest 程序的局域网组播发现 -->
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+    <!-- 前台服务通知（Android 13+ 运行时授权；targetSdk 28 默认授予但用户可撤销） -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:allowBackup="false"
@@ -37,5 +39,11 @@
             android:name=".LinuxService"
             android:enabled="true"
             android:exported="false" />
+
+        <!-- 软件设置：不导出、无启动入口，仅权限检查界面可进入 -->
+        <activity
+            android:name=".SettingsActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout" />
     </application>
 </manifest>

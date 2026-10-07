@@ -9,7 +9,7 @@ RUN apk add --no-cache \
       tigervnc novnc websockify \
       xkeyboard-config xkbcomp xauth \
       ttf-dejavu font-noto font-noto-cjk adwaita-icon-theme \
-      gcompat openssh \
+      gcompat openssh curl bash \
  && rm -rf /var/cache/apk/* /tmp/* /usr/share/man/* /usr/share/doc/* /var/log/*
 
 # 默认账户 qsbye / qsbye，sudo 免密；预生成 SSH host keys 避免首启 keygen 耗时
@@ -37,5 +37,14 @@ RUN chmod 755 /usr/local/lib/localsend_compat.so \
  && printf '#!/bin/sh\nexport LD_PRELOAD=/usr/local/lib/localsend_compat.so\nexec /home/qsbye/localsend-cli "$@"\n' \
       > /usr/bin/localsend-cli \
  && chmod 755 /usr/bin/localsend-cli
+
+# OpenCode（终端内运行的 AI 编程助手，https://opencode.ai）
+# 官方安装器能识别 Alpine（/etc/alpine-release），自动下载 linux-arm64-musl 包，
+# 装到 $HOME/.opencode/bin。以 qsbye 家目录为 HOME 执行；--no-modify-path 避免改 rc 文件。
+# 再在 /usr/bin 放符号链接，保证桌面会话与 ssh 非登录命令（默认 PATH 可能只有 /usr/bin）都能直接运行。
+RUN curl -fsSL https://opencode.ai/v2/install \
+      | HOME=/home/qsbye bash -s -- --no-modify-path \
+ && ln -sf /home/qsbye/.opencode/bin/opencode /usr/bin/opencode \
+ && chown -R qsbye:qsbye /home/qsbye/.opencode
 
 CMD ["/bin/sh"]

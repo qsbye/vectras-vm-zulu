@@ -154,7 +154,12 @@ public class LinuxService extends Service {
             }
 
             File proot = new File(binDir, "proot");
-            String geometry = screenGeometry();
+            // 桌面配置（Documents/VectrasVM/config/config.toml，由 MainActivity 初始化创建）：
+            // 朝向决定长宽边排列；resolution 非 auto 时直接使用手动分辨率
+            AppConfig cfg = AppConfig.load();
+            Status.log("config: orientation=" + cfg.orientation
+                    + ", resolution=" + cfg.resolution);
+            String geometry = screenGeometry(cfg);
 
             List<String> cmd = new ArrayList<>();
             cmd.add(proot.getAbsolutePath());
@@ -299,14 +304,28 @@ public class LinuxService extends Service {
         }
     }
 
-    private String screenGeometry() {
+    /**
+     * 计算 Xvnc 几何尺寸。
+     * 手动分辨率（resolution = "WxH"）原样使用；auto 时取屏幕物理像素的
+     * 长边/短边，再按配置朝向排列：横屏（默认）= 长x短，竖屏 = 短x长。
+     * 不依赖当前旋转状态——旋转动画可能尚未完成，用长边/短边确定性计算。
+     */
+    private String screenGeometry(AppConfig cfg) {
+        String explicit = cfg.explicitGeometry();
+        if (explicit != null) {
+            return explicit;
+        }
         try {
             WindowManager wm = (WindowManager) getSystemService(WINDOW_SERVICE);
             Point p = new Point();
             wm.getDefaultDisplay().getRealSize(p);
-            return p.x + "x" + p.y;
+            int longEdge = Math.max(p.x, p.y);
+            int shortEdge = Math.min(p.x, p.y);
+            return cfg.isLandscape()
+                    ? longEdge + "x" + shortEdge
+                    : shortEdge + "x" + longEdge;
         } catch (Exception e) {
-            return "1280x800";
+            return cfg.isLandscape() ? "1280x800" : "800x1280";
         }
     }
 
