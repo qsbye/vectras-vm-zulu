@@ -561,6 +561,7 @@ about 1–3 minutes depending on flash storage speed.
 | proot 启动即退出 / proot exits immediately | 确认 `PROOT_LOADER` 指向、`files/bin` 符号链接未断、仅 arm64 设备 / Verify `PROOT_LOADER`, unbroken `files/bin` symlinks, arm64-only device |
 | 配置改错导致朝向/分辨率异常 / Bad config breaks orientation or resolution | 编辑或删除 `Documents/VectrasVM/config/config.toml` 后重进应用 / Edit or delete `Documents/VectrasVM/config/config.toml` and reopen |
 | 手动调试 / Manual debugging | `adb shell run-as com.qsbye.alpinedesktop` 可进入应用私有目录 / `adb shell run-as com.qsbye.alpinedesktop` enters the app-private dir |
+| 桌面顶部面板消失（看似被遮挡） / Top panel missing (looks obscured) | libwnck 的 pager 插件启动竞态崩溃；APK 内置无 pager 的面板配置，每次启动由 LinuxService 自动覆盖修复，升级新版即可 / The libwnck pager plugin crashes at startup; the APK ships a pager-free panel config that LinuxService applies on every boot — update to the new build |
 
 ## 已知取舍 / Known Trade-offs
 

@@ -132,6 +132,7 @@ public class LinuxService extends Service {
             setupToolBin(binDir, libDir);
 
             setupFakeSysData(rootfs);
+            patchPanelConfig(rootfs);
 
             // 共享目录：宿主机 Documents/VectrasVM/home/qsbye/share ↔ guest /home/qsbye/share
             // 没有则自动创建；仅在存储权限已授予时挂载（权限由 MainActivity 经 XXPermissions 申请）。
@@ -250,6 +251,27 @@ public class LinuxService extends Service {
         File tmp = new File(rootfs, "tmp");
         mkdir(tmp);
         chmod(tmp, 0777, true);
+    }
+
+    /**
+     * 用 APK 内置的 xfce4-panel.xml 覆盖 guest 面板配置（每次启动执行，幂等）。
+     * 原因：面板自带的 pager（工作区切换）插件基于 libwnck，在 Xvnc + 早期
+     * randr 事件下存在启动竞态，wnck_pager_size_request 断言
+     * (pager->priv->screen != NULL) 失败并 Bail out，会拖垮整个 xfce4-panel，
+     * 表现为桌面顶部面板消失（看似被遮挡）。内置配置移除了该插件；单工作区
+     * 移动场景下 pager 本就无用。从 APK assets 覆盖无需重建 rootfs，且对
+     * 已释放过 rootfs 的旧安装同样生效。
+     */
+    private void patchPanelConfig(File rootfs) throws Exception {
+        File cfgDir = new File(rootfs,
+                "home/qsbye/.config/xfce4/xfconf/xfce-perchannel-xml");
+        mkdir(cfgDir);
+        File target = new File(cfgDir, "xfce4-panel.xml");
+        try (InputStream in = getAssets().open("xfce4-panel.xml")) {
+            Files.copy(in, target.toPath(),
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        }
+        Status.log("panel config patched (pager plugin removed)");
     }
 
     /**
