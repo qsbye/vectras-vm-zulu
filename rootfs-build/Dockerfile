@@ -29,11 +29,12 @@ RUN chmod 755 /home/qsbye/localsend-cli \
  && chown qsbye:qsbye /home/qsbye/localsend-cli
 
 # musl 缺 glibc 私有的 __res_init 符号（glibc≥2.34 将其并入 libc.so.6），
-# 该二进制在加载期引用它；用 LD_PRELOAD 空实现桩补齐。
+# 且 Android 禁止 app 域 bind netlink 路由套接字（getifaddrs 走 netlink 必失败），
+# 用 LD_PRELOAD 垫片补齐：__res_init 空实现 + ioctl 版 getifaddrs。
 # 包装器放 /usr/bin（sshd 默认 PATH 可达），任何会话都能直接跑 localsend-cli
-COPY libres_init_stub.so /usr/local/lib/libres_init_stub.so
-RUN chmod 755 /usr/local/lib/libres_init_stub.so \
- && printf '#!/bin/sh\nexport LD_PRELOAD=/usr/local/lib/libres_init_stub.so\nexec /home/qsbye/localsend-cli "$@"\n' \
+COPY localsend_compat.so /usr/local/lib/localsend_compat.so
+RUN chmod 755 /usr/local/lib/localsend_compat.so \
+ && printf '#!/bin/sh\nexport LD_PRELOAD=/usr/local/lib/localsend_compat.so\nexec /home/qsbye/localsend-cli "$@"\n' \
       > /usr/bin/localsend-cli \
  && chmod 755 /usr/bin/localsend-cli
 

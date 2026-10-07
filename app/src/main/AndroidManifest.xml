@@ -8,6 +8,8 @@
     <!-- 共享目录 Documents/VectrasVM/home/qsbye/share（targetSdk 28 走传统存储权限） -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <!-- LocalSend 等 guest 程序的局域网组播发现 -->
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
 
     <application
         android:allowBackup="false"

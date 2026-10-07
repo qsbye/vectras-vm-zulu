@@ -9,6 +9,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Point;
+import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Environment;
 import android.os.IBinder;
@@ -50,6 +51,7 @@ public class LinuxService extends Service {
 
     private Process process;
     private PowerManager.WakeLock wakeLock;
+    private WifiManager.MulticastLock multicastLock;
     private File logFile;
     private volatile boolean shuttingDown;
 
@@ -62,6 +64,16 @@ public class LinuxService extends Service {
         PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
         wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "AlpineDesktop:session");
         wakeLock.acquire(24 * 60 * 60 * 1000L);
+
+        // guest 内程序（如 localsend-cli）收发局域网组播的前提：
+        // manifest 声明 CHANGE_WIFI_MULTICAST_STATE + 持有 MulticastLock，
+        // 否则 Android 对组播 sendto 直接返回 EACCES
+        WifiManager wm = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
+        if (wm != null) {
+            multicastLock = wm.createMulticastLock("AlpineDesktop:multicast");
+            multicastLock.setReferenceCounted(false);
+            multicastLock.acquire();
+        }
 
         new Thread(this::boot, "alpine-boot").start();
     }
@@ -394,6 +406,9 @@ public class LinuxService extends Service {
         }
         if (wakeLock != null && wakeLock.isHeld()) {
             wakeLock.release();
+        }
+        if (multicastLock != null && multicastLock.isHeld()) {
+            multicastLock.release();
         }
         super.onDestroy();
     }
