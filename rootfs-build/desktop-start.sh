@@ -5,7 +5,8 @@
 # 环境变量 GEOMETRY=WxH 由 App 按屏幕尺寸传入
 GEOMETRY="${GEOMETRY:-1280x800}"
 # 固定客户机 PATH，避免 Android 宿主机 PATH 经 proot 泄漏导致找不到命令
-export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+# 末尾追加 /home/qsbye，方便直接运行 localsend-cli 等放在家目录的程序
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/home/qsbye
 export LANG=C.UTF-8
 export HOME=/home/qsbye
 export USER=qsbye
@@ -37,11 +38,12 @@ export DBUS_SESSION_BUS_ADDRESS="$(cat /tmp/.dbus-session-addr 2>/dev/null)"
 export DBUS_SYSTEM_BUS_ADDRESS=unix:path=/run/dbus/system_bus_socket
 export DISPLAY=:0
 
-# ---- 启动 TigerVNC：root 运行（-nolock 要求 uid 0），RFB 无密码、仅回环 ----
+# ---- 启动 TigerVNC：root 运行（-nolock 要求 uid 0），RFB 无密码、监听 0.0.0.0 ----
 # -ac 关闭 X 协议访问控制；-nolock 绕开 proot 下 lock 文件 link() 失败
+# 注意：不带 -localhost，5900 对局域网可见且无任何认证，仅建议在可信网络使用
 rm -f /tmp/.X0-lock /tmp/.X11-unix/X0
 Xvnc :0 -geometry "${GEOMETRY}" -depth 24 -rfbport 5900 -SecurityTypes None \
-  -localhost -AlwaysShared -nolock -ac -desktop Alpine-XFCE \
+  -AlwaysShared -nolock -ac -desktop Alpine-XFCE \
   -AcceptKeyEvents -AcceptPointerEvents -AcceptCutText -SendCutText \
   > /tmp/vnc.log 2>&1 &
 

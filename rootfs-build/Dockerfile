@@ -9,6 +9,7 @@ RUN apk add --no-cache \
       tigervnc novnc websockify \
       xkeyboard-config xkbcomp xauth \
       ttf-dejavu font-noto font-noto-cjk adwaita-icon-theme \
+      gcompat \
  && rm -rf /var/cache/apk/* /tmp/* /usr/share/man/* /usr/share/doc/* /var/log/*
 
 # 默认账户 qsbye / qsbye，sudo 免密
@@ -20,5 +21,10 @@ RUN adduser -D -s /bin/sh qsbye \
 
 COPY desktop-start.sh /usr/local/bin/desktop-start.sh
 RUN chmod 755 /usr/local/bin/desktop-start.sh
+
+# LocalSend CLI（glibc 动态链接，依赖上面的 gcompat）
+COPY localsend-cli /home/qsbye/localsend-cli
+RUN chmod 755 /home/qsbye/localsend-cli \
+ && chown qsbye:qsbye /home/qsbye/localsend-cli
 
 CMD ["/bin/sh"]
