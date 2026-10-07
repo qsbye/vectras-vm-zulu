@@ -21,6 +21,12 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.hjq.permissions.OnPermissionCallback;
+import com.hjq.permissions.Permission;
+import com.hjq.permissions.XXPermissions;
+
+import java.util.List;
+
 public class MainActivity extends Activity {
 
     private static final String DESKTOP_URL =
@@ -63,7 +69,27 @@ public class MainActivity extends Activity {
 
         retryButton.setOnClickListener(v -> startDesktop());
         setupWebView();
-        startDesktop();
+        requestStorageThenStart();
+    }
+
+    /** 先经 XXPermissions 申请存储权限（用于共享目录挂载），无论结果如何都继续启动 */
+    private void requestStorageThenStart() {
+        XXPermissions.with(this)
+                .permission(Permission.WRITE_EXTERNAL_STORAGE, Permission.READ_EXTERNAL_STORAGE)
+                .request(new OnPermissionCallback() {
+                    @Override
+                    public void onGranted(List<String> permissions, boolean allGranted) {
+                        startDesktop();
+                    }
+
+                    @Override
+                    public void onDenied(List<String> permissions, boolean doNotAskAgain) {
+                        Toast.makeText(MainActivity.this,
+                                "未授予存储权限，共享目录 /home/qsbye/share 不可用",
+                                Toast.LENGTH_LONG).show();
+                        startDesktop();
+                    }
+                });
     }
 
     private void startDesktop() {

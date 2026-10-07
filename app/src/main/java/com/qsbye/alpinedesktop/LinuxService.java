@@ -7,8 +7,10 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Point;
 import android.os.Build;
+import android.os.Environment;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.view.WindowManager;
@@ -120,6 +122,25 @@ public class LinuxService extends Service {
 
             setupFakeSysData(rootfs);
 
+            // 共享目录：宿主机 Documents/VectrasVM/home/qsbye/share ↔ guest /home/qsbye/share
+            // 没有则自动创建；仅在存储权限已授予时挂载（权限由 MainActivity 经 XXPermissions 申请）。
+            // 注意：proot --bind 是路径翻译，guest 进程以 app uid 直接访问 /sdcard，
+            // sdcard FUSE 上 chown/chmod 会失败（EPERM），属预期行为。
+            File shareDir = null;
+            if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                    == PackageManager.PERMISSION_GRANTED) {
+                File dir = new File(Environment.getExternalStorageDirectory(),
+                        "Documents/VectrasVM/home/qsbye/share");
+                if (!dir.isDirectory() && !dir.mkdirs()) {
+                    Status.log("share dir create failed: " + dir);
+                } else {
+                    shareDir = dir;
+                    mkdir(new File(rootfs, "home/qsbye/share"));
+                }
+            } else {
+                Status.log("storage permission not granted, share dir disabled");
+            }
+
             File proot = new File(binDir, "proot");
             String geometry = screenGeometry();
 
@@ -144,6 +165,10 @@ public class LinuxService extends Service {
             cmd.add("--bind=" + new File(rootfs, "proc/.version") + ":/proc/version");
             cmd.add("--bind=" + new File(rootfs, "sys/.empty") + ":/sys/fs/selinux");
             cmd.add("--bind=" + tmpDir.getAbsolutePath() + ":/tmp");
+            if (shareDir != null) {
+                cmd.add("--bind=" + shareDir.getAbsolutePath() + ":/home/qsbye/share");
+                Status.log("share mounted: " + shareDir.getAbsolutePath());
+            }
             // 干净环境启动，杜绝 Android 宿主机变量泄漏进 guest
             cmd.add("/usr/bin/env");
             cmd.add("-i");

@@ -5,6 +5,9 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- 共享目录 Documents/VectrasVM/home/qsbye/share（targetSdk 28 走传统存储权限） -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
 
     <application
         android:allowBackup="false"
@@ -12,6 +15,7 @@
         android:label="@string/app_name"
         android:extractNativeLibs="true"
         android:usesCleartextTraffic="true"
+        android:requestLegacyExternalStorage="true"
         android:hardwareAccelerated="true"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">

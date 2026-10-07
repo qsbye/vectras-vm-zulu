@@ -55,3 +55,10 @@ android {
         }
     }
 }
+
+dependencies {
+    // 运行时权限申请（存储权限 → 共享目录挂载）
+    implementation 'com.github.getActivity:XXPermissions:18.63'
+    // XXPermissions 18.63 的 with() 重载引用 support-v4 Fragment，编译期需要该类文件
+    implementation 'com.android.support:support-v4:28.0.0'
+}

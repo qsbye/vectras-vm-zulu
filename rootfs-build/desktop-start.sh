@@ -66,6 +66,11 @@ startxfce4 > /tmp/xfce.log 2>&1 &
 # sleep infinity 会保持整个会话存活
 websockify --web=/usr/share/novnc 6080 127.0.0.1:5900 > /tmp/websockify.log 2>&1 &
 
+# ---- OpenSSH：局域网 ssh 接入（端口 8022，Android 应用无权绑定 <1024 端口）----
+# -D 前台运行（守护进程双重 fork 的孙进程会脱离 proot 跟踪），由 shell 放后台
+mkdir -p /run/sshd
+/usr/sbin/sshd -D -p 8022 > /tmp/sshd.log 2>&1 &
+
 echo "=== Alpine XFCE desktop ready on 127.0.0.1:6080 ==="
 
 # 保持 proot 会话存活
