@@ -16,10 +16,16 @@ export XDG_RUNTIME_DIR=/tmp/runtime-qsbye
 export XDG_CACHE_HOME=/home/qsbye/.cache
 export XDG_CONFIG_HOME=/home/qsbye/.config
 
-# ---- DNS 自愈 ----
-# 镜像已固化国内 DNS；此处兜底：配置为空或解析失败时重新探测。
+# ---- DNS ----
+# Docker 无法把 /etc/resolv.conf 固化进镜像层（守护进程屏蔽该路径），
+# 预置的国内 DNS 放在 /usr/local/share/resolv.conf.default：
+# 配置为空（首启必然为空，0 字节）时先装入预置配置，再实测解析；
+# 仍失败则逐个探测候选 DNS 自愈。
 # （Alpine 版踩过 resolv.conf 0 字节导致 ping 域名 bad address 的坑）
-if [ ! -s /etc/resolv.conf ] || ! timeout 5 getent ahostsv4 www.baidu.com >/dev/null 2>&1; then
+if [ ! -s /etc/resolv.conf ] && [ -f /usr/local/share/resolv.conf.default ]; then
+    cp /usr/local/share/resolv.conf.default /etc/resolv.conf 2>/dev/null || true
+fi
+if ! timeout 5 getent ahostsv4 www.baidu.com >/dev/null 2>&1; then
     echo "[desktop-start] DNS 不可用，执行 fix-dns.sh ..."
     /usr/local/bin/fix-dns.sh >/tmp/fix-dns.log 2>&1 || true
 fi

@@ -19,12 +19,6 @@ FROM ${BASE_IMAGE}
 ENV DEBIAN_FRONTEND=noninteractive \
     LANG=C.UTF-8
 
-# ---- DNS：镜像层 /etc/resolv.conf 是 0 字节空文件（docker export 会原样带出），
-# 在 Android proot 中必然 ping 域名 bad address，构建期就固化国内公共 DNS ----
-COPY resolv.conf /etc/resolv.conf
-COPY fix-dns.sh /usr/local/bin/fix-dns.sh
-RUN chmod 755 /usr/local/bin/fix-dns.sh
-
 # XFCE4 + TigerVNC(免密) + noVNC/websockify + 中文字体
 # --no-install-recommends 控制体积；xfce4 元包的硬依赖已含 thunar/panel/session/wm4 等，
 # 显式补回需要的 recommends（desktop-base 主题、xfce4-notifyd 通知、xfonts 字体、mesa dri）
@@ -61,6 +55,15 @@ RUN useradd -m -s /bin/bash -G sudo qsbye \
 RUN printf 'PasswordAuthentication yes\nUsePAM no\n' \
       > /etc/ssh/sshd_config.d/99-proot.conf
 
+# ---- DNS 固化 ----
+# Docker 构建期 /etc/resolv.conf 是被守护进程屏蔽的特殊路径（COPY/RUN 写入都不进镜像层，
+# docker export 拿到的仍是基础镜像里的 0 字节空文件，进 Android proot 后必然 bad address）。
+# 因此预置配置放在非屏蔽路径，由 desktop-start.sh 在 proot 入口首启时装入 /etc/resolv.conf。
+COPY resolv.conf /usr/local/share/resolv.conf.default
+COPY fix-dns.sh /usr/local/bin/fix-dns.sh
+RUN chmod 644 /usr/local/share/resolv.conf.default \
+ && chmod 755 /usr/local/bin/fix-dns.sh
+
 COPY desktop-start.sh /usr/local/bin/desktop-start.sh
 RUN chmod 755 /usr/local/bin/desktop-start.sh
 
@@ -74,6 +77,12 @@ COPY xfce4-panel.xml /etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml
 RUN mkdir -p /home/qsbye/.config/xfce4/xfconf/xfce-perchannel-xml \
  && cp /etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml \
        /home/qsbye/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml
+
+# xfdesktop 默认背景路径 /usr/share/xfce4/backdrops/xubuntu-wallpaper.png 在
+# 非 xubuntu 系统不存在，会刷 "Failed to load image" 并退回纯色；链到自带壁纸
+RUN mkdir -p /usr/share/xfce4/backdrops \
+ && ln -sf /usr/share/backgrounds/xfce/xfce-blue.jpg \
+           /usr/share/xfce4/backdrops/xubuntu-wallpaper.png
 
 # DNS 一键修复桌面快捷方式（幂等，可反复运行）
 COPY fix-dns.desktop /home/qsbye/Desktop/fix-dns.desktop
