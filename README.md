@@ -157,8 +157,19 @@ alpine-desktop/
 │   ├── localsend-cli                 # LocalSend CLI（arm64 glibc 动态链接版）
 │   ├── localsend_compat.c            # musl 兼容垫片源码（见"关键技术注意点"）
 │   └── localsend_compat.so           # 垫片编译产物（docker 内 alpine build-base 编译）
+├── rootfs-build-ubuntu/              # 【可选】Ubuntu 26.04 XFCE 变体 rootfs（glibc）
+│   ├── Dockerfile                    # ubuntu:resolute-20260927（可用 BASE_IMAGE 覆盖），
+│   │                                 #   多阶段构建：builder 编译 localsend 垫片
+│   ├── desktop-start.sh              # 同路径客户机入口，额外含 DNS 首启自检
+│   ├── resolv.conf                   # 预置国内 DNS（装入 /usr/local/share，非直接写 /etc）
+│   ├── fix-dns.sh / fix-dns.desktop  # DNS 自愈脚本 + 桌面"一键修复DNS"
+│   ├── localsend_compat.c            # glibc 版垫片（只重写 getifaddrs，无 __res_init stub）
+│   ├── localsend-cli / vnc_lite.html # 与 Alpine 版共用的二进制与页面
+│   └── rootfs-ubuntu.bin             # 构建产物（~486 MB，git 忽略，不默认进 assets）
 ├── scripts/
-│   ├── build-rootfs.sh               # Docker 构建 rootfs 并导出为 assets/rootfs.bin
+│   ├── build-rootfs.sh               # Docker 构建 Alpine rootfs 并导出为 assets/rootfs.bin
+│   ├── build-rootfs-ubuntu.sh        # 同上，构建 Ubuntu 变体（默认导出到 rootfs-build-ubuntu/，
+│   │                                 #   传参 assets 路径即覆盖打包）
 │   ├── build-proot.sh                # 【历史】旧的静态 proot 构建入口
 │   └── proot-build/build.sh          # 【历史】proot 5.4.0 + Alpine 补丁（已被 termux 套件取代）
 ├── build-with-timestamp.sh           # 一键：assembleRelease → zipalign → apksigner
@@ -191,6 +202,87 @@ alpine-desktop/
 `docker export` is used instead of in-container `busybox tar`: the latter has a
 bug handling Alpine's merged `/bin -> usr/bin` directories and drops many busybox
 applets.
+
+### 1b. Ubuntu 变体 rootfs（可选） / Ubuntu variant rootfs (optional)
+
+**中文**
+
+除默认的 Alpine rootfs 外，仓库还提供一套 **Ubuntu 26.04 LTS（Resolute，glibc）**
+XFCE rootfs，构建方式与 Alpine 版完全一致：
+
+```bash
+# 前置：本地已拉取基础镜像（docker image inspect 校验，不存在会直接报错）
+docker pull ubuntu:resolute-20260927
+
+# 默认产物 rootfs-build-ubuntu/rootfs-ubuntu.bin（~486 MB），不进 assets、不影响 Alpine 包
+./scripts/build-rootfs-ubuntu.sh
+
+# 直接覆盖 assets 打出 Ubuntu 版 APK
+./scripts/build-rootfs-ubuntu.sh app/src/main/assets/rootfs.bin
+# 想切回 Alpine：./scripts/build-rootfs.sh
+
+# 基础镜像可用环境变量覆盖
+BASE_IMAGE=ubuntu:26.04 ./scripts/build-rootfs-ubuntu.sh
+```
+
+两套 rootfs 的客户机入口路径相同（`/usr/local/bin/desktop-start.sh`），
+Android 端（proot 命令行、端口、共享目录绑定）**无需任何改动**。Ubuntu 变体的差异：
+
+- **glibc 原生**：无需 gcompat；opencode 自动装 linux-arm64-gnu 版；
+  localsend 垫片只保留 `getifaddrs` 的 ioctl 重写（glibc 自带 `__res_init`，
+  不能像 musl 版那样 stub）
+- **DNS 固化 + 自愈**：基础镜像层 `/etc/resolv.conf` 是 0 字节空文件，且
+  Docker 构建期屏蔽该路径（COPY/RUN 写入不进镜像层）。预置国内 DNS
+  （223.5.5.5/119.29.29.29/114.114.114.114）放在
+  `/usr/local/share/resolv.conf.default`，首启由 desktop-start.sh 装入；
+  解析失败再跑 `/usr/local/bin/fix-dns.sh` 逐个探测候选 DNS；桌面有
+  "一键修复DNS"图标
+- 非空 machine-id（dbus 系统总线需要）；sshd 经 `99-proot.conf` 关 PAM、
+  开密码认证；xfdesktop 默认壁纸做了符号链接兜底
+- rootfs ~486 MB，APK 约 770 MB（Alpine 版分别为 ~384 MB / ~666 MB）
+- **从 Alpine 版升级安装必须清应用数据**（`adb shell pm clear
+  com.qsbye.alpinedesktop`）：`.ready` 标记存在时不会重新解包 rootfs，
+  否则跑的还是旧 Alpine
+
+**English**
+
+Alongside the default Alpine rootfs, the repo includes an **Ubuntu 26.04 LTS
+(Resolute, glibc)** XFCE rootfs built the same way:
+
+```bash
+# Prerequisite: base image present locally (verified via docker image inspect)
+docker pull ubuntu:resolute-20260927
+
+# Default output rootfs-build-ubuntu/rootfs-ubuntu.bin (~486 MB); kept out of assets
+./scripts/build-rootfs-ubuntu.sh
+
+# Overwrite assets to build an Ubuntu-flavored APK
+./scripts/build-rootfs-ubuntu.sh app/src/main/assets/rootfs.bin
+# Switch back to Alpine: ./scripts/build-rootfs.sh
+
+# Base image is overridable
+BASE_IMAGE=ubuntu:26.04 ./scripts/build-rootfs-ubuntu.sh
+```
+
+Both rootfs use the same guest entry path (`/usr/local/bin/desktop-start.sh`),
+so the Android side (proot args, ports, shared-folder binds) needs **no changes**.
+Ubuntu-variant differences:
+
+- **Native glibc**: no gcompat; opencode installs the linux-arm64-gnu build; the
+  localsend shim only rewrites `getifaddrs` via ioctl (glibc ships `__res_init`,
+  so unlike the musl shim it must not be stubbed)
+- **Pinned + self-healing DNS**: the base image's `/etc/resolv.conf` is a
+  0-byte file, and Docker masks that path during build (COPY/RUN writes never
+  reach the image layer). Pinned China DNS (223.5.5.5/119.29.29.29/
+  114.114.114.114) ships at `/usr/local/share/resolv.conf.default`, installed
+  on first boot by desktop-start.sh; if resolution fails, `/usr/local/bin/fix-dns.sh`
+  probes candidate servers one by one; a "Fix DNS" desktop icon is included
+- Non-empty machine-id (required by the dbus system bus); sshd drops PAM and
+  enables password auth via `99-proot.conf`; a symlink covers the default wallpaper
+- rootfs ~486 MB → APK ~770 MB (Alpine: ~384 MB / ~666 MB)
+- **Upgrading from the Alpine build requires clearing app data**
+  (`adb shell pm clear com.qsbye.alpinedesktop`): with the `.ready` marker
+  present the rootfs is not re-extracted, so the old Alpine would keep running
 
 ### 2. proot 套件（已随仓库提供，无需构建） / proot toolchain (bundled, no build needed)
 
@@ -584,6 +676,7 @@ about 1–3 minutes depending on flash storage speed.
 | guest 内大量 `Function not implemented` / Many `Function not implemented` in guest | 检查是否误设了 `PROOT_NO_SECCOMP`（删掉它） / Check for an erroneous `PROOT_NO_SECCOMP` (remove it) |
 | dbus 报 `Memory allocation failure` / chdir 失败 / dbus `Memory allocation failure` or chdir failure | 确认 desktop-start.sh 用的是 `--nofork` 而不是 `dbus-launch` / Ensure desktop-start.sh uses `--nofork`, not `dbus-launch` |
 | 6080 不通 / Port 6080 unreachable | guest 内 `/tmp/vnc.log`、`/tmp/xfce.log`、`/tmp/websockify.log` / Guest `/tmp/vnc.log`, `/tmp/xfce.log`, `/tmp/websockify.log` |
+| 域名解析失败（ping IP 通、域名 bad address，仅 Ubuntu 变体）/ DNS resolution fails (IP pings, hostname bad address, Ubuntu variant only) | 桌面双击"一键修复DNS"，或 ssh 内执行 `/usr/local/bin/fix-dns.sh`；首启日志见 `/tmp/fix-dns.log` / Double-click "Fix DNS" on the desktop, or run `/usr/local/bin/fix-dns.sh` over ssh; first-boot log at `/tmp/fix-dns.log` |
 | proot 启动即退出 / proot exits immediately | 确认 `PROOT_LOADER` 指向、`files/bin` 符号链接未断、仅 arm64 设备 / Verify `PROOT_LOADER`, unbroken `files/bin` symlinks, arm64-only device |
 | 配置改错导致朝向/分辨率异常 / Bad config breaks orientation or resolution | 编辑或删除 `Documents/VectrasVM/config/config.toml` 后重进应用 / Edit or delete `Documents/VectrasVM/config/config.toml` and reopen |
 | 手动调试 / Manual debugging | `adb shell run-as com.qsbye.alpinedesktop` 可进入应用私有目录 / `adb shell run-as com.qsbye.alpinedesktop` enters the app-private dir |
