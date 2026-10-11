@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Fix DNS
+Name[zh_CN]=一键修复DNS
+Comment=Probe working public DNS servers and pin them
+Comment[zh_CN]=探测可用的公共 DNS 并写入 /etc/resolv.conf
+Exec=xfce4-terminal --title=Fix-DNS --command /usr/local/bin/fix-dns.sh
+Icon=preferences-system-network
+Terminal=false
+Categories=System;Network;
+StartupNotify=false

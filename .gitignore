@@ -40,9 +40,6 @@ captures/
 .idea/
 .github/token
 
-# TRAE 本地 agent 配置（技能/规格，含本机路径，不入库）
-.trae/
-
 # Keystore files
 *.jks
 *.keystore
