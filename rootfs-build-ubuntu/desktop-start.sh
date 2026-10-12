@@ -40,7 +40,7 @@ chown -R qsbye:qsbye /home/qsbye 2>/dev/null || true
 # 注意：在 Android app 进程内，proot 无法可靠跟踪守护进程双重 fork 出的孙进程，
 # 因此系统/会话总线一律 --nofork 前台运行再由 shell 放到后台，
 # 不使用 dbus-launch / --fork。
-rm -f /tmp/dbus-system.log /tmp/dbus-session.log
+rm -f /tmp/.dbus-session-addr /tmp/dbus-system.log /tmp/dbus-session.log
 dbus-daemon --system --nofork --nopidfile \
     >/tmp/dbus-system.log 2>&1 &
 dbus-daemon --session --nofork --nopidfile --print-address=1 \
