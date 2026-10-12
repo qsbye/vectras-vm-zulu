@@ -144,9 +144,18 @@ public final class TarExtractor {
                         Files.deleteIfExists(target);
                         try {
                             Files.createLink(target, src);
-                        } catch (IOException ignore) {
-                            // 个别跨目录硬链接失败不致命
+                        } catch (IOException | SecurityException e) {
+                            // Android 应用私有目录上 createLink 常被 SELinux/内核
+                            // 策略拒绝（Ubuntu 26.04 rust-coreutils 有 115 个硬链接，
+                            // 静默跳过会导致 /usr/bin/env 悬空、proot 拒启）。
+                            // 回退为内容复制：牺牲少量存储换取可靠解包。
+                            try (InputStream in = Files.newInputStream(src)) {
+                                Files.copy(in, target,
+                                        java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                            }
                         }
+                        // 复制回退后是独立 inode，需要显式恢复权限位
+                        setMode(target, mode);
                         break;
                     }
                     default:

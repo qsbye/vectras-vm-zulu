@@ -231,6 +231,15 @@ Android 端（proot 命令行、端口、共享目录绑定）**无需任何改�
 - **glibc 原生**：无需 gcompat；opencode 自动装 linux-arm64-gnu 版；
   localsend 垫片只保留 `getifaddrs` 的 ioctl 重写（glibc 自带 `__res_init`，
   不能像 musl 版那样 stub）
+- **bwrap 直通垫片**：Ubuntu 26.04 的 gtk3 经 glycin 加载 SVG 图标，glycin
+  固定用 bwrap 沙箱拉起 loader；Android/proot 无 user namespace，bwrap 必败
+  → xfce4-panel 启动即崩。`/usr/bin/bwrap` 被替换为直通脚本（解析参数、
+  导出 --setenv、exec 真身，真身保留为 `bwrap.real`）
+- **App 解包器硬链接回退**：Ubuntu 26.04 的 rust-coreutils 把 115 个工具名
+  硬链接到 `/usr/bin/coreutils` 单二进制；Android 应用私有目录上
+  `Files.createLink` 被 SELinux 拒绝。`TarExtractor` 对硬链接条目在
+  createLink 失败时自动回退为内容复制，否则 `/usr/bin/env` 悬空、proot
+  报 `'/usr/bin/env' not found` 直接拒启
 - **DNS 固化 + 自愈**：基础镜像层 `/etc/resolv.conf` 是 0 字节空文件，且
   Docker 构建期屏蔽该路径（COPY/RUN 写入不进镜像层）。预置国内 DNS
   （223.5.5.5/119.29.29.29/114.114.114.114）放在
@@ -271,6 +280,17 @@ Ubuntu-variant differences:
 - **Native glibc**: no gcompat; opencode installs the linux-arm64-gnu build; the
   localsend shim only rewrites `getifaddrs` via ioctl (glibc ships `__res_init`,
   so unlike the musl shim it must not be stubbed)
+- **bwrap passthrough shim**: on Ubuntu 26.04 gtk3 loads SVG icons via glycin,
+  which always spawns its loader under bwrap; without user namespaces on
+  Android/proot bwrap always fails → xfce4-panel aborts on startup.
+  `/usr/bin/bwrap` is replaced by a passthrough script (parses args, exports
+  --setenv, execs the payload; the real binary stays at `bwrap.real`)
+- **Hardlink fallback in the app extractor**: Ubuntu 26.04's rust-coreutils
+  hardlinks 115 tool names to the single `/usr/bin/coreutils` binary;
+  `Files.createLink` is denied by SELinux in the app-private directory.
+  `TarExtractor` falls back to content copying when createLink fails —
+  otherwise `/usr/bin/env` dangles and proot aborts with
+  `'/usr/bin/env' not found`
 - **Pinned + self-healing DNS**: the base image's `/etc/resolv.conf` is a
   0-byte file, and Docker masks that path during build (COPY/RUN writes never
   reach the image layer). Pinned China DNS (223.5.5.5/119.29.29.29/

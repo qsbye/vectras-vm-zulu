@@ -84,6 +84,15 @@ RUN mkdir -p /usr/share/xfce4/backdrops \
  && ln -sf /usr/share/backgrounds/xfce/xfce-blue.jpg \
            /usr/share/xfce4/backdrops/xubuntu-wallpaper.png
 
+# ---- bwrap 直通垫片 ----
+# gtk3 ≥ 3.24.50 的 SVG 图标加载改走 glycin，glycin 固定用 bwrap 沙箱拉起
+# loader；Android/proot 无 user namespace，bwrap 必败 → SVG 图标加载失败 →
+# gtk 断言崩溃（xfce4-panel 启动即 Aborted）。proot 内本无沙箱需求，
+# 用直通垫片替换 bwrap（真身保留为 bwrap.real）。
+RUN mv /usr/bin/bwrap /usr/bin/bwrap.real
+COPY bwrap-shim.sh /usr/bin/bwrap
+RUN chmod 755 /usr/bin/bwrap
+
 # DNS 一键修复桌面快捷方式（幂等，可反复运行）
 COPY fix-dns.desktop /home/qsbye/Desktop/fix-dns.desktop
 RUN chmod 755 /home/qsbye/Desktop/fix-dns.desktop
@@ -102,8 +111,11 @@ RUN chmod 755 /home/qsbye/localsend-cli /usr/local/lib/localsend_compat.so \
 # 官方安装器识别 Ubuntu（/etc/os-release），自动下载 linux-arm64-gnu 包，
 # 装到 $HOME/.opencode/bin。以 qsbye 家目录为 HOME 执行；--no-modify-path 避免改 rc 文件。
 # 再在 /usr/bin 放符号链接，保证桌面会话与 ssh 非登录命令（默认 PATH 可能只有 /usr/bin）都能直接运行。
-RUN curl -fsSL https://opencode.ai/v2/install \
-      | HOME=/home/qsbye bash -s -- --no-modify-path \
+# 安装端点偶发 500，加重试（pipefail 需要 bash）。
+RUN bash -c 'set -o pipefail; ok=0; for i in 1 2 3 4 5; do \
+      if curl -fsSL https://opencode.ai/v2/install | HOME=/home/qsbye bash -s -- --no-modify-path; then ok=1; break; fi; \
+      echo "opencode install attempt $i failed, retry in 10s"; sleep 10; \
+    done; [ "$ok" = 1 ] && test -x /home/qsbye/.opencode/bin/opencode' \
  && ln -sf /home/qsbye/.opencode/bin/opencode /usr/bin/opencode \
  && chown -R qsbye:qsbye /home/qsbye
 
